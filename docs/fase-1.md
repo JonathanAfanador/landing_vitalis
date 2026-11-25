@@ -2,6 +2,18 @@
 
 Entregables de la sección 6 del prompt. No hay código todavía: esto se aprueba antes de empezar la Fase 2.
 
+## Decisiones aprobadas
+
+| Tema | Decisión |
+| :-- | :-- |
+| Tienda | En `/tienda`, con accesos rápidos desde la portada |
+| Hosting | Vercel (plan gratuito) |
+| Base de datos | **Supabase** (plan gratuito, ya enlazado a tu GitHub). Solo se usa su PostgreSQL |
+| Tipografía | Cormorant Garamond + Manrope, en minúsculas normales (no todo en mayúsculas) |
+| Panel | **Usuarios con roles y permisos**, gestionables desde `/admin` |
+| Skills extra | `webapp-testing` y `supabase-postgres-best-practices` instaladas |
+| Textos | Titular y tagline aprobados de momento |
+
 Los datos que faltan (dirección, WhatsApp, horario, doctor, procedimientos, domicilios, pagos) se dejan como `<Pending>`. Solo se ven en `pnpm dev` y nunca llegan al build.
 
 ---
@@ -231,7 +243,9 @@ PostgreSQL con Drizzle ORM. Cambios respecto al modelo del prompt:
 | `pedidos.declara_formula` | Guarda que el cliente dijo tener fórmula para los medicamentos que la piden. El servidor rechaza el pedido si hay uno de esos y está en `false` |
 | `ip_hash` en `pedidos` y `solicitudes_cita` | El rate limit sale de una consulta ("¿cuántos envíos desde este hash en 10 minutos?"), sin tabla extra ni Redis. Se guarda un hash con sal, nunca la IP |
 | `updated_at` en `pedidos` y `solicitudes_cita` | Para saber cuándo cambió el estado desde el panel |
-| `administradores` y `sesiones_admin` | Para `/admin` sin librería de autenticación: contraseña con `scrypt` de `node:crypto`, sesión en cookie `HttpOnly` + `Secure` + `SameSite=Lax`, y en la base solo el hash del token, así se puede revocar. El primer administrador se crea con un script por consola, no hay registro público |
+| `usuarios`, `roles`, `permisos`, `rol_permiso` y `sesiones` | Roles y permisos para `/admin` sin librería de autenticación. Contraseña con `scrypt` de `node:crypto`, sesión en cookie `HttpOnly` + `Secure` + `SameSite=Lax`, y en la base solo el hash del token, así se puede revocar. El primer usuario se crea con un script por consola, no hay registro público |
+| Todo en el schema `vitalis`, no en `public` | Supabase publica el schema `public` en su API REST con la clave anónima. Las tablas en un schema propio no salen por ahí. Además se activa RLS sin políticas como segunda barrera |
+| Rol de base de datos `vitalis_app` con permisos mínimos | La app no se conecta como `postgres`. Solo tiene `SELECT/INSERT/UPDATE` donde hace falta y `DELETE` únicamente en `sesiones`, `medicamento_especie` y `rol_permiso` |
 | `ON DELETE RESTRICT` de `pedido_items` a `medicamentos` | Un medicamento con pedidos no se borra: se desactiva (`activo = false`). Así el historial no se rompe |
 | IDs `integer generated always as identity` | Más pequeños y rápidos que UUID. El código público del pedido es aparte (`VIT-7K3Q9`), así no se exponen IDs secuenciales |
 | `timestamptz` en todas las fechas | Sin errores de zona horaria (Colombia es UTC−5) |
@@ -244,7 +258,10 @@ erDiagram
   medicamentos ||--o{ pedido_items : "RESTRICT"
   pedidos ||--o{ pedido_items : "CASCADE"
   especies ||--o{ solicitudes_cita : ""
-  administradores ||--o{ sesiones_admin : "CASCADE"
+  roles ||--o{ usuarios : "RESTRICT"
+  roles ||--o{ rol_permiso : "CASCADE"
+  permisos ||--o{ rol_permiso : "CASCADE"
+  usuarios ||--o{ sesiones : "CASCADE"
 
   especies {
     int id PK
@@ -315,20 +332,57 @@ erDiagram
     timestamptz created_at
     timestamptz updated_at
   }
-  administradores {
+  roles {
     int id PK
-    text email UK
-    text password_hash
-    timestamptz created_at
+    text nombre UK
+    text descripcion
+    bool es_sistema
   }
-  sesiones_admin {
+  permisos {
+    int id PK
+    text codigo UK
+    text descripcion
+  }
+  rol_permiso {
+    int rol_id PK,FK
+    int permiso_id PK,FK
+  }
+  usuarios {
+    int id PK
+    text nombre
+    text email "UNIQUE lower(email)"
+    text password_hash
+    int rol_id FK
+    bool activo
+    timestamptz ultimo_acceso
+    timestamptz created_at
+    timestamptz updated_at
+  }
+  sesiones {
     text token_hash PK
-    int administrador_id FK
+    int usuario_id FK
     timestamptz expira_en
+    timestamptz created_at
   }
 ```
 
 Enums: `estado_pedido` (pendiente, confirmado, enviado, entregado, cancelado), `estado_cita` (pendiente, confirmada, atendida, cancelada) y `tipo_cita` (valoracion_ortopedica, control, otro).
+
+### Roles y permisos
+
+- **Permisos**: lista fija, porque el código los comprueba. Se crean en una migración:
+  `medicamentos:ver`, `medicamentos:editar`, `pedidos:ver`, `pedidos:gestionar`, `citas:ver`, `citas:gestionar`, `usuarios:gestionar`, `roles:gestionar`.
+- **Roles**: se crean, editan y borran desde `/admin/roles`, marcando qué permisos tiene cada uno. Roles iniciales:
+
+| Rol | Permisos |
+| :-- | :-- |
+| Administrador | Todos. Es de sistema: no se puede borrar ni quitarle `usuarios:gestionar` ni `roles:gestionar`, para que nadie se quede fuera |
+| Farmacia | `medicamentos:*` y `pedidos:*` |
+| Recepción | `citas:*` y `pedidos:ver` |
+
+- **Usuarios**: un rol por usuario. Se gestionan desde `/admin/usuarios` (crear, cambiar rol, desactivar, cambiar contraseña). Un usuario no puede desactivarse a sí mismo ni quitarse el rol de administrador si es el último.
+- **Cómo se comprueba**: el middleware carga la sesión con los permisos del rol en una sola consulta. Cada página y cada Action de `/admin` llama a `requierePermiso('pedidos:gestionar')`. Sin permiso: 403 con la marca y un enlace de vuelta. El menú del panel solo muestra lo que el usuario puede usar.
+- Sesiones de 12 horas. Al cambiar la contraseña o desactivar un usuario se borran sus sesiones. Login con límite de intentos.
 
 Índices (además de PK y UNIQUE):
 - `medicamentos (categoria_id)` y un índice parcial `medicamentos (nombre) WHERE activo`, porque la tienda solo lista activos.
@@ -337,6 +391,7 @@ Enums: `estado_pedido` (pendiente, confirmado, enviado, entregado, cancelado), `
 - `pedidos (estado, created_at DESC)` y `solicitudes_cita (estado, created_at DESC)`, para el listado del panel.
 - `pedidos (ip_hash, created_at)` y `solicitudes_cita (ip_hash, created_at)`, para el rate limit.
 - `solicitudes_cita (especie_id)`.
+- `usuarios (rol_id)`, `rol_permiso (permiso_id)`, `sesiones (usuario_id)` y `sesiones (expira_en)` para limpiar las caducadas.
 
 La búsqueda por nombre usa `ILIKE` sobre un catálogo pequeño. Si pasa de unos miles de productos, se añade `pg_trgm`, no antes.
 
@@ -350,9 +405,11 @@ Reglas del servidor:
 
 ## 5. Hosting recomendado
 
-**Vercel + Neon (PostgreSQL).** Las rutas de servidor de Astro corren en Node con `@astrojs/vercel`, donde Drizzle, `node:crypto` y el driver de Neon funcionan sin trucos. Neon tiene plan gratuito, integración directa con Vercel y ramas de base de datos para desarrollo.
+**Vercel + Supabase (PostgreSQL), los dos gratis.** Las rutas de servidor de Astro corren en Node con `@astrojs/vercel`, donde Drizzle con el driver `postgres` y `node:crypto` funcionan sin trucos.
 
-En Cloudflare Workers, Postgres necesitaría Hyperdrive o un driver HTTP, y `scrypt` de Node habría que cambiarlo por Web Crypto. Es posible, pero añade piezas sin ganar nada aquí.
+- Conexión de la app por el **pooler de Supabase en modo transacción** (puerto 6543) con `prepare: false`, que es lo que pide ese modo. Las migraciones van por la conexión directa.
+- Ojo con el plan gratuito de Supabase: **pausa el proyecto tras 7 días sin actividad**. Se reactiva desde el panel. Si la web tiene visitas, no pasa.
+- Solo se usa el PostgreSQL de Supabase. Su Auth, Storage y API REST no hacen falta.
 
 No se despliega nada hasta que lo apruebes.
 
@@ -373,7 +430,7 @@ No se despliega nada hasta que lo apruebes.
 │   ├── icon-192.png · icon-512.png · site.webmanifest
 │   └── robots.txt lo genera src/pages/robots.txt.ts
 ├── scripts/
-│   └── crear-admin.ts           Crea el primer administrador por consola
+│   └── crear-admin.ts           Crea el primer usuario administrador por consola
 ├── src/
 │   ├── actions/
 │   │   ├── index.ts             Exporta las acciones
@@ -390,7 +447,7 @@ No se despliega nada hasta que lo apruebes.
 │   │   │                        AccesoTienda, ComoPedir, PorQue, Ubicacion, Faq, CtaFinal
 │   │   ├── tienda/              Filtros, TarjetaMedicamento, Carrito
 │   │   ├── formularios/         FormCita, FormPedido, Campo
-│   │   ├── admin/               TablaMedicamentos, FormMedicamento, ListaPedidos, ListaCitas
+│   │   ├── admin/               TablaMedicamentos, FormMedicamento, ListaPedidos, ListaCitas, FormUsuario, FormRol
 │   │   └── ui/                  Boton, Icono, Pending
 │   ├── data/
 │   │   ├── vitalis.ts           Todo el contenido: paradas, textos, FAQ, contacto, horario, SEO
@@ -398,10 +455,10 @@ No se despliega nada hasta que lo apruebes.
 │   ├── db/
 │   │   ├── schema.ts            Tablas, enums, relaciones, índices y CHECKs (Drizzle)
 │   │   ├── client.ts            Conexión
-│   │   ├── queries/             medicamentos.ts, pedidos.ts, citas.ts, admin.ts
+│   │   ├── queries/             medicamentos.ts, pedidos.ts, citas.ts, usuarios.ts, roles.ts
 │   │   └── seed.ts              Datos de ejemplo (bloqueado en producción)
 │   ├── lib/
-│   │   ├── auth.ts              scrypt, sesiones y cookie
+│   │   ├── auth.ts              scrypt, sesiones, cookie y requierePermiso
 │   │   ├── validacion.ts        Esquemas Zod compartidos
 │   │   ├── formato.ts           COP y teléfono
 │   │   ├── whatsapp.ts          Construye el enlace con el resumen
@@ -414,7 +471,7 @@ No se despliega nada hasta que lo apruebes.
 │   │   ├── index.astro
 │   │   ├── tienda/index.astro · tienda/[slug].astro
 │   │   ├── pedido.astro
-│   │   ├── admin/               index, login, medicamentos, pedidos, citas
+│   │   ├── admin/               index, login, medicamentos, pedidos, citas, usuarios, roles
 │   │   ├── politica-de-datos.astro · terminos.astro · 404.astro
 │   │   └── robots.txt.ts · llms.txt.ts
 │   ├── scripts/
@@ -431,7 +488,7 @@ No se despliega nada hasta que lo apruebes.
 └── README.md
 ```
 
-Dependencias previstas, solo estas: `astro`, `@astrojs/vercel`, `@astrojs/sitemap`, `tailwindcss`, `@tailwindcss/vite`, `gsap`, `lenis`, `sharp`, `drizzle-orm`, `@neondatabase/serverless`, `zod` (viene con Astro), `@phosphor-icons/core`. En desarrollo: `drizzle-kit`, `typescript`, `eslint`, `prettier`, `vitest`, `@playwright/test`, `tsx`.
+Dependencias previstas, solo estas: `astro`, `@astrojs/vercel`, `@astrojs/sitemap`, `tailwindcss`, `@tailwindcss/vite`, `gsap`, `lenis`, `sharp`, `drizzle-orm`, `postgres`, `zod` (viene con Astro), `@phosphor-icons/core`. En desarrollo: `drizzle-kit`, `typescript`, `eslint`, `prettier`, `vitest`, `@playwright/test`, `tsx`.
 
 No hay cookies de analítica ni de terceros (el mapa solo carga al hacer clic), así que no hace falta banner de cookies. Sí hay política de tratamiento de datos.
 
@@ -440,7 +497,7 @@ No hay cookies de analítica ni de terceros (el mapa solo carga al hacer clic), 
 ## 7. Preguntas (solo decisiones; los datos que faltan quedan pendientes)
 
 1. **Tienda en `/tienda`** en vez de dentro de la portada, con accesos rápidos desde la portada. ¿De acuerdo?
-2. **Hosting: Vercel + Neon.** ¿Lo apruebas, o prefieres Cloudflare o Supabase?
+2. **Hosting: Vercel + Neon.** ¿Lo apruebas, o prefieres Cloudflare o Supabase? → Vercel + Supabase.
 3. **Tipografía: Cormorant Garamond + Manrope.** ¿Te gusta, o prefieres Cinzel en los titulares para parecerse más al logo (todo en mayúsculas)?
 4. **Admin:** un solo tipo de usuario administrador, sin roles. ¿Suficiente?
 5. **Skills extra:** el prompt usa `webapp-testing` y `supabase-postgres-best-practices` "si están instaladas". ¿Las instalo antes de la Fase 2?
