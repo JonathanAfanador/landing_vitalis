@@ -1,21 +1,23 @@
 # Recursos de Vitalis
 
-Material real de la clínica, ya optimizado para la web.
+Material real de la clínica. Aquí solo quedan los originales: lo que usa la web ya está en su sitio.
 
-| Carpeta | Qué hay |
+| Dónde | Qué hay |
 | :-- | :-- |
-| `originales/` | Logo (`logo-vitalis.jpg`) y foto de la recepción (`recepcion.jpg`) tal como llegaron. Son la fuente para regenerar o vectorizar. |
-| `imagenes/` | Logo y su isotipo (perro, gato y círculo) en WebP. Recepción en AVIF y WebP a 600 y 1200 px. |
-| `video/` | El vídeo del recorrido (vertical, 9:16) dividido en sus 3 tomas, por los 2 cortes que tiene. |
-| `posters/` | Primer fotograma de cada clip en WebP, para mostrarlo mientras carga el vídeo. |
+| `recursos/originales/` | Logo (`logo-vitalis.jpg`) y foto de la recepción (`recepcion.jpg`) tal como llegaron. Son la fuente para regenerar o vectorizar. |
+| `src/assets/brand/` | Logo vectorizado con potrace (`logo.svg`, `logo-claro.svg` para fondos azules) e isotipo (`isotipo.svg`). |
+| `src/assets/fotos/` | Recepción sin metadatos. Astro genera AVIF y WebP a varios anchos. |
+| `src/assets/posters/` | Primer fotograma de cada clip en WebP. |
+| `public/video/` | Los 3 clips del recorrido (`recorrido-1.mp4` a `recorrido-3.mp4`). |
+| `public/` | Favicon, iconos del manifest y `og-image.jpg`. |
 
 ## Clips del recorrido
 
 | Clip | Duración | Qué se ve | Peso |
 | :-- | :-- | :-- | :-- |
-| `recorrido-1-recepcion.mp4` | 22,7 s | Letrero retroiluminado, flores, afiche de bienvenida, diploma | 2,5 MB |
-| `recorrido-2-estanteria-dorada.mp4` | 4,3 s | Estanterías con figuras doradas y plantas | 0,3 MB |
-| `recorrido-3-modelos-oseos.mp4` | 15,6 s | Modelos de huesos y columna, libros de ortopedia, diplomas | 1,1 MB |
+| `recorrido-1.mp4` | 22,7 s | Letrero retroiluminado, flores, afiche de bienvenida, diploma | 2,5 MB |
+| `recorrido-2.mp4` | 4,3 s | Estanterías con figuras doradas y plantas | 0,3 MB |
+| `recorrido-3.mp4` | 15,6 s | Modelos de huesos y columna, libros de ortopedia, diplomas | 1,1 MB |
 
 El vídeo original pesaba 7 MB. Los 3 clips suman 3,8 MB.
 
@@ -32,3 +34,7 @@ ffmpeg -ss <inicio> -i video.mp4 -t <duración> -an \
 ## Colores de marca
 
 Medidos sobre el logo original: azul marino `#071834` y dorado `#CCA76C`.
+
+## Logo vectorizado
+
+Se amplió el JPG 4×, se separó una máscara por color (azul marino y dorado) y cada una se trazó con potrace (`-u 1 --turdsize 25 --opttolerance 0.4`). El isotipo sale de trazar solo la parte superior. `logo.svg` pesa 22 KB comprimido e `isotipo.svg` 15 KB; se sirven como archivos aparte (con caché), no en línea.

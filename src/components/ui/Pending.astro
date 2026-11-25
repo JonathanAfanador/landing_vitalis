@@ -1,0 +1,21 @@
+---
+// Marca contenido pendiente de verificar. Solo se ve en `pnpm dev`; en el build no se renderiza nada.
+interface Props {
+  dato: string;
+  class?: string;
+}
+
+const { dato, class: className = '' } = Astro.props;
+---
+
+{import.meta.env.DEV && (
+  <span
+    class:list={[
+      'inline-flex items-center gap-1 rounded-md border border-dashed border-azul-led bg-azul-led/10 px-2 py-0.5 text-xs font-medium text-azul-led',
+      className,
+    ]}
+    data-pending
+  >
+    Pendiente: {dato}
+  </span>
+)}

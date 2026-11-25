@@ -1,0 +1,31 @@
+---
+import Pagina from '../layouts/Pagina.astro';
+import Pending from '../components/ui/Pending.astro';
+import { negocio } from '../data/vitalis';
+---
+
+<Pagina
+  titulo="Términos y condiciones · Vitalis"
+  descripcion="Condiciones para pedir medicamentos veterinarios en Vitalis Centro Veterinario."
+>
+  <article class="mx-auto max-w-3xl [&_h2]:heading-5 [&_h2]:mt-10 [&_p]:body-3 [&_p]:mt-4 [&_p]:text-tinta-600">
+    <h1 class="heading-2">Términos y condiciones</h1>
+    <Pending dato="revisión legal de este borrador" class="mt-4" />
+
+    <h2>Pedidos</h2>
+    <p>
+      Un pedido hecho en la web es una solicitud. {negocio.nombre} lo confirma por WhatsApp con la
+      disponibilidad, el valor final, el medio de pago y la entrega.
+    </p>
+
+    <h2>Medicamentos con fórmula</h2>
+    <p>
+      Los medicamentos marcados con fórmula médica veterinaria solo se entregan si presentas una fórmula
+      vigente.
+    </p>
+
+    <h2>Precios</h2>
+    <p>Los precios están en pesos colombianos.</p>
+    <Pending dato="impuestos, medios de pago, domicilios, cambios y devoluciones" />
+  </article>
+</Pagina>

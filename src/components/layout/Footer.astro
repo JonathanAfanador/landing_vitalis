@@ -1,0 +1,104 @@
+---
+import logoClaro from '../../assets/brand/logo-claro.svg';
+import Icono from '../ui/Icono.astro';
+import Pending from '../ui/Pending.astro';
+import { contacto, navegacion, negocio } from '../../data/vitalis';
+
+const enPortada = Astro.url.pathname === '/';
+const enlace = (href: string) => (href.startsWith('#') && !enPortada ? `/${href}` : href);
+
+const canales = [
+  {
+    icono: 'whatsapp-logo',
+    texto: 'WhatsApp',
+    href: contacto.whatsapp && `https://wa.me/${contacto.whatsapp}`,
+  },
+  { icono: 'phone', texto: contacto.telefono, href: contacto.telefono && `tel:${contacto.telefono}` },
+  { icono: 'envelope-simple', texto: contacto.correo, href: contacto.correo && `mailto:${contacto.correo}` },
+  { icono: 'instagram-logo', texto: 'Instagram', href: contacto.instagram },
+  { icono: 'facebook-logo', texto: 'Facebook', href: contacto.facebook },
+] as const;
+const disponibles = canales.filter((c): c is (typeof canales)[number] & { href: string } => Boolean(c.href));
+---
+
+<footer class="bg-azul-900 px-4 pt-16 pb-24 text-crema-50 sm:px-6">
+  <div class="mx-auto grid max-w-6xl gap-12 md:grid-cols-3">
+    <div>
+      <img
+        src={logoClaro.src}
+        alt={negocio.nombre}
+        width="200"
+        height="239"
+        class="h-40 w-auto"
+        loading="lazy"
+      />
+      <p class="body-6 mt-6 text-crema-50/80">
+        {negocio.ciudad}, {negocio.departamento}
+      </p>
+      {negocio.direccion ? (
+        <p class="body-6 text-crema-50/80">{negocio.direccion}</p>
+      ) : (
+        <Pending dato="dirección" class="mt-2" />
+      )}
+    </div>
+
+    <nav aria-label="Pie de página">
+      <p class="caption-3 text-dorado-400">Navegación</p>
+      <ul class="mt-4 flex flex-col gap-2">
+        {navegacion.map((item) => (
+          <li>
+            <a href={enlace(item.href)} class="body-6 hover:text-dorado-400">
+              {item.texto}
+            </a>
+          </li>
+        ))}
+        <li>
+          <a href="/tienda" class="body-6 hover:text-dorado-400">
+            Tienda
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div>
+      <p class="caption-3 text-dorado-400">Contacto</p>
+      {disponibles.length ? (
+        <ul class="mt-4 flex flex-col gap-2">
+          {disponibles.map((canal) => (
+            <li>
+              <a
+                href={canal.href}
+                class="body-6 inline-flex items-center gap-2 hover:text-dorado-400"
+                target="_blank"
+                rel="noopener"
+              >
+                <Icono nombre={canal.icono} class="size-5" />
+                {canal.texto}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <Pending dato="WhatsApp, teléfono, correo y redes" class="mt-4" />
+      )}
+    </div>
+  </div>
+
+  <div class="mx-auto mt-12 flex max-w-6xl flex-col gap-4 border-t border-crema-50/15 pt-6 sm:flex-row sm:items-center sm:justify-between">
+    <p class="caption-5 text-crema-50/70">
+      © {new Date().getFullYear()} {negocio.nombre}
+    </p>
+    <ul class="flex flex-wrap gap-4">
+      <li>
+        <a href="/politica-de-datos" class="caption-5 text-crema-50/70 hover:text-dorado-400">
+          Política de tratamiento de datos
+        </a>
+      </li>
+      <li>
+        <a href="/terminos" class="caption-5 text-crema-50/70 hover:text-dorado-400">
+          Términos y condiciones
+        </a>
+      </li>
+    </ul>
+  </div>
+</footer>

@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+dist/
+.astro/
+.vercel/
+.claude/
+recursos/
+public/
+src/assets/
+*.md

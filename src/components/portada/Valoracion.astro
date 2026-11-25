@@ -1,0 +1,29 @@
+---
+import Icono from '../ui/Icono.astro';
+import Pending from '../ui/Pending.astro';
+import { enlaceWhatsApp } from '../../lib/whatsapp';
+
+const whatsapp = enlaceWhatsApp('Hola, quiero agendar una valoración ortopédica para mi mascota.');
+---
+
+<section id="valoracion" class="px-4 py-16 sm:px-6 lg:py-24">
+  <div class="mx-auto max-w-3xl rounded-3xl border border-azul-900/10 p-6 text-center sm:p-12" data-reveal>
+    <span class="mx-auto grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+      <Icono nombre="calendar-check" />
+    </span>
+    <h2 class="heading-2 mt-6">Agenda una valoración ortopédica</h2>
+    <p class="body-3 mx-auto mt-4 max-w-xl text-tinta-600">
+      Si tu mascota cojea, le duele al moverse o se está recuperando de una lesión, el doctor la revisa y te
+      explica las opciones.
+    </p>
+    {whatsapp ? (
+      <a href={whatsapp} class="btn-principal mt-8" target="_blank" rel="noopener">
+        <Icono nombre="whatsapp-logo" class="size-5" />
+        Agendar por WhatsApp
+      </a>
+    ) : (
+      <Pending dato="número de WhatsApp" class="mt-8" />
+    )}
+    <Pending dato="formulario de cita (Fase 4)" class="mt-4" />
+  </div>
+</section>

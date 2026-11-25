@@ -1,0 +1,39 @@
+---
+import { Picture } from 'astro:assets';
+import Pending from '../ui/Pending.astro';
+import { doctor, negocio } from '../../data/vitalis';
+import poster from '../../assets/posters/recorrido-3.webp';
+---
+
+<section id="doctor" class="px-4 py-16 sm:px-6 lg:py-24">
+  <div class="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2">
+    <div class="mx-auto w-full max-w-sm" data-reveal>
+      <Picture
+        src={poster}
+        alt="Estanterías de la clínica con modelos de huesos y de columna y libros de ortopedia"
+        formats={['avif', 'webp']}
+        fallbackFormat="webp"
+        widths={[384, 576]}
+        sizes="(min-width: 768px) 384px, 90vw"
+        class="aspect-4/5 w-full rounded-t-full object-cover outline outline-offset-8 outline-dorado-400"
+      />
+      <Pending dato="foto del doctor" class="mt-6" />
+    </div>
+    <div data-reveal>
+      <p class="caption-3 text-dorado-700">Quién te atiende</p>
+      <h2 class="heading-2 mt-3">{doctor.nombre ?? 'Un especialista en ortopedia'}</h2>
+      {!doctor.nombre && <Pending dato="nombre del doctor" class="mt-3" />}
+      <p class="body-3 mt-4 text-tinta-600">{negocio.especialidad}.</p>
+      {doctor.formacion ? (
+        <p class="body-3 mt-4 text-tinta-600">{doctor.formacion}</p>
+      ) : (
+        <Pending dato="formación del doctor" class="mt-4" />
+      )}
+      {doctor.tarjetaProfesional ? (
+        <p class="body-6 mt-4 text-tinta-600">Tarjeta profesional {doctor.tarjetaProfesional}</p>
+      ) : (
+        <Pending dato="tarjeta profesional" class="mt-2" />
+      )}
+    </div>
+  </div>
+</section>

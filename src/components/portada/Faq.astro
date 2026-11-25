@@ -1,0 +1,34 @@
+---
+import Icono from '../ui/Icono.astro';
+import Pending from '../ui/Pending.astro';
+import { preguntas } from '../../data/vitalis';
+
+const visibles = import.meta.env.DEV ? preguntas : preguntas.filter((p) => p.respuesta);
+---
+
+<section id="preguntas" class="px-4 py-16 sm:px-6 lg:py-24">
+  <div class="mx-auto max-w-3xl">
+    <div data-reveal>
+      <p class="caption-3 text-dorado-700">Preguntas frecuentes</p>
+      <h2 class="heading-2 mt-3">Lo que más nos preguntan</h2>
+    </div>
+    <div class="mt-10 divide-y divide-azul-900/10 border-y border-azul-900/10">
+      {visibles.map((item) => (
+        <details class="group py-2">
+          <summary class="title-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 py-3 [&::-webkit-details-marker]:hidden">
+            {item.pregunta}
+            <Icono
+              nombre="caret-down"
+              class="size-5 shrink-0 text-dorado-700 transition duration-300 ease-base group-open:rotate-180"
+            />
+          </summary>
+          {item.respuesta ? (
+            <p class="body-3 pb-4 text-tinta-600">{item.respuesta}</p>
+          ) : (
+            <Pending dato="respuesta" class="mb-4" />
+          )}
+        </details>
+      ))}
+    </div>
+  </div>
+</section>

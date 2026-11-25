@@ -1,0 +1,27 @@
+---
+import Icono from '../ui/Icono.astro';
+import { beneficios } from '../../data/vitalis';
+import type { NombreIcono } from '../../lib/iconos';
+---
+
+<section id="por-que" class="px-4 py-16 sm:px-6 lg:py-24">
+  <div class="mx-auto max-w-6xl">
+    <div class="max-w-170" data-reveal>
+      <p class="caption-3 text-dorado-700">Por qué Vitalis</p>
+      <h2 class="heading-2 mt-3">Confianza para tu mascota y para ti</h2>
+    </div>
+    <ul class="mt-12 grid gap-x-12 gap-y-10 md:grid-cols-2">
+      {beneficios.map((beneficio) => (
+        <li class="flex gap-4" data-reveal>
+          <span class="grid size-12 shrink-0 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+            <Icono nombre={beneficio.icono as NombreIcono} />
+          </span>
+          <div>
+            <h3 class="heading-6">{beneficio.titulo}</h3>
+            <p class="body-3 mt-2 text-tinta-600">{beneficio.texto}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

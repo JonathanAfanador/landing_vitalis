@@ -1,0 +1,23 @@
+---
+import Pagina from '../layouts/Pagina.astro';
+import isotipo from '../assets/brand/isotipo.svg';
+import { cta } from '../data/vitalis';
+---
+
+<Pagina titulo="Página no encontrada · Vitalis" descripcion="La página que buscas no existe." noindex>
+  <div class="mx-auto flex max-w-xl flex-col items-center text-center">
+    <img src={isotipo.src} alt="" width="160" height="122" class="w-40" />
+    <h1 class="heading-2 mt-8">No encontramos esta página</h1>
+    <p class="body-3 mt-4 text-tinta-600">
+      Puede que el enlace haya cambiado. Vuelve al inicio o busca un medicamento.
+    </p>
+    <div class="mt-8 flex flex-wrap justify-center gap-3">
+      <a href="/" class="btn-principal">
+        Volver al inicio
+      </a>
+      <a href={cta.principal.href} class="btn-borde">
+        {cta.principal.texto}
+      </a>
+    </div>
+  </div>
+</Pagina>

@@ -1,0 +1,53 @@
+---
+import Icono from '../ui/Icono.astro';
+import { categorias, cta, especies } from '../../data/vitalis';
+import type { NombreIcono } from '../../lib/iconos';
+---
+
+<section id="medicamentos" class="px-4 py-16 sm:px-6 lg:py-24">
+  <div class="mx-auto max-w-6xl">
+    <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between" data-reveal>
+      <div class="max-w-170">
+        <p class="caption-3 text-dorado-700">Medicamentos veterinarios</p>
+        <h2 class="heading-2 mt-3">Lo que tu mascota necesita, con precio a la vista</h2>
+      </div>
+      <a href={cta.principal.href} class="btn-principal self-start md:self-auto">
+        Ver medicamentos
+        <Icono nombre="arrow-right" class="size-5" />
+      </a>
+    </div>
+
+    <ul class="mt-10 flex flex-wrap gap-3" aria-label="Buscar por especie" data-reveal>
+      {especies.map((especie) => (
+        <li>
+          <a href={`/tienda?especie=${especie.slug}`} class="btn-borde">
+            <Icono nombre={especie.icono as NombreIcono} class="size-5 text-dorado-700" />
+            {especie.nombre}
+          </a>
+        </li>
+      ))}
+    </ul>
+
+    <ul class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3" aria-label="Buscar por categoría">
+      {categorias.map((categoria) => (
+        <li data-reveal>
+          <a
+            href={`/tienda?categoria=${categoria.slug}`}
+            class="group flex h-full flex-col gap-6 rounded-3xl bg-arena-100 p-6 transition duration-300 ease-base hover:-translate-y-0.5 hover:bg-dorado-400/30"
+          >
+            <span class="grid size-12 place-items-center rounded-full bg-crema-50 text-dorado-700">
+              <Icono nombre={categoria.icono as NombreIcono} />
+            </span>
+            <span class="title-1 flex items-center justify-between gap-2">
+              {categoria.nombre}
+              <Icono
+                nombre="arrow-right"
+                class="size-5 shrink-0 transition duration-300 ease-base group-hover:translate-x-1"
+              />
+            </span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

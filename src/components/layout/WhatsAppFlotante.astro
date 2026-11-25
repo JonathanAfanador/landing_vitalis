@@ -1,0 +1,23 @@
+---
+import Icono from '../ui/Icono.astro';
+import Pending from '../ui/Pending.astro';
+import { enlaceWhatsApp } from '../../lib/whatsapp';
+
+const enlace = enlaceWhatsApp('Hola, vengo de la página web de Vitalis.');
+---
+
+{enlace ? (
+  <a
+    href={enlace}
+    target="_blank"
+    rel="noopener"
+    aria-label="Escríbenos por WhatsApp"
+    class="fixed right-4 bottom-4 z-40 grid size-14 place-items-center rounded-full bg-azul-900 text-crema-50 shadow-lg transition duration-300 ease-base hover:scale-105 hover:bg-azul-700 active:scale-98"
+  >
+    <Icono nombre="whatsapp-logo" class="size-7" />
+  </a>
+) : (
+  <div class="fixed right-4 bottom-4 z-40">
+    <Pending dato="botón de WhatsApp (falta el número)" />
+  </div>
+)}

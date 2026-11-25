@@ -1,0 +1,17 @@
+---
+import { tagline } from '../../data/vitalis';
+---
+
+<section class="px-4 py-24 sm:px-6 lg:py-24" aria-label="Nuestra promesa">
+  <p class="heading-1 mx-auto max-w-170 text-center text-azul-900" data-tagline>
+    {tagline.map((linea) => (
+      <span class="block text-balance">
+        {linea.split(' ').map((palabra) => (
+          <>
+            <span class="tagline-word">{palabra}</span>{' '}
+          </>
+        ))}
+      </span>
+    ))}
+  </p>
+</section>

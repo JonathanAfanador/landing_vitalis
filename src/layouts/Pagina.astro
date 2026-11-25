@@ -1,0 +1,24 @@
+---
+// Páginas interiores sencillas: cabecera, contenido y pie.
+import Layout from './Layout.astro';
+import Header from '../components/layout/Header.astro';
+import Footer from '../components/layout/Footer.astro';
+import SkipLink from '../components/layout/SkipLink.astro';
+
+interface Props {
+  titulo: string;
+  descripcion: string;
+  noindex?: boolean;
+}
+
+const { titulo, descripcion, noindex = false } = Astro.props;
+---
+
+<Layout titulo={titulo} descripcion={descripcion} noindex={noindex}>
+  <SkipLink />
+  <Header />
+  <main id="contenido" class="px-4 pt-32 pb-24 sm:px-6">
+    <slot />
+  </main>
+  <Footer />
+</Layout>

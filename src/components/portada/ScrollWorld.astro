@@ -1,0 +1,91 @@
+---
+import { Picture } from 'astro:assets';
+import Icono from '../ui/Icono.astro';
+import { cta, pruebaHero, recorrido } from '../../data/vitalis';
+import poster1 from '../../assets/posters/recorrido-1.webp';
+import poster2 from '../../assets/posters/recorrido-2.webp';
+import poster3 from '../../assets/posters/recorrido-3.webp';
+
+const posters = [poster1, poster2, poster3];
+const posterDe = (clip: number) => {
+  const poster = posters[clip - 1];
+  if (!poster) throw new Error(`Falta el póster del clip ${clip}`);
+  return poster;
+};
+---
+
+<section id="inicio" class="relative grid lg:grid-cols-2" aria-label="Recorrido por la clínica" data-world>
+  <div class="sticky top-0 col-start-1 row-start-1 h-svh lg:col-start-2" data-stage>
+    <div class="relative h-full lg:flex lg:items-end lg:justify-center lg:pt-24 lg:pb-8">
+      <div class="absolute inset-0 overflow-hidden lg:relative lg:inset-auto lg:aspect-9/16 lg:h-full lg:rounded-t-full lg:outline lg:outline-offset-8 lg:outline-dorado-400">
+        {recorrido.map((parada, i) => (
+          <Picture
+            src={posterDe(parada.clip)}
+            alt={parada.alt}
+            formats={['avif', 'webp']}
+            fallbackFormat="webp"
+            widths={[384, 576]}
+            sizes="(min-width: 1024px) 40vw, 100vw"
+            loading={i === 0 ? 'eager' : 'lazy'}
+            fetchpriority={i === 0 ? 'high' : 'auto'}
+            class={`absolute inset-0 size-full object-cover transition-opacity duration-500 ease-base ${i === 0 ? '' : 'opacity-0'}`}
+            pictureAttributes={{ class: 'contents' }}
+            data-poster
+          />
+        ))}
+        {recorrido.map((parada) => (
+          <video
+            class="absolute inset-0 size-full object-cover opacity-0 transition-opacity duration-300 ease-base"
+            data-clip
+            data-src={`/video/recorrido-${parada.clip}.mp4`}
+            muted
+            playsinline
+            preload="none"
+            disablepictureinpicture
+            aria-hidden="true"
+            tabindex="-1"
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <div class="relative z-10 col-start-1 row-start-1">
+    {recorrido.map((parada, i) => (
+      <article id={parada.id} style={`height:${parada.alto}svh`} data-stop>
+        <div class="sticky top-0 flex h-svh flex-col justify-end px-4 pb-6 sm:px-6 lg:justify-center lg:px-16 lg:pb-0 xl:px-24">
+          <div class="max-w-xl rounded-3xl bg-crema-50/90 p-6 backdrop-blur-md lg:rounded-none lg:bg-transparent lg:p-0 lg:backdrop-blur-none">
+            <p class="caption-3 mb-3 text-dorado-700">{parada.etiqueta}</p>
+            {i === 0 ? (
+              <>
+                <h1 class="heading-1 max-w-170 bg-linear-to-r from-azul-900 to-tinta-600 bg-clip-text text-transparent">
+                  {parada.titulo}
+                </h1>
+                <p class="body-3 mt-4 max-w-170 text-tinta-600 lg:text-lg">{parada.texto}</p>
+                <div class="mt-6 flex flex-wrap items-center gap-3">
+                  <a href={cta.principal.href} class="btn-principal">
+                    {cta.principal.texto}
+                    <Icono nombre="arrow-right" class="size-5" />
+                  </a>
+                </div>
+                <p class="body-6 mt-4 flex items-center gap-2 text-tinta-600">
+                  <Icono nombre="stethoscope" class="size-5 shrink-0 text-dorado-700" />
+                  {pruebaHero}
+                </p>
+                <p class="caption-5 mt-6 hidden items-center gap-2 text-tinta-600 lg:flex">
+                  <Icono nombre="arrow-down" class="size-4" />
+                  Desliza para recorrer la clínica
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 class="heading-2">{parada.titulo}</h2>
+                <p class="body-3 mt-4 text-tinta-600 lg:text-lg">{parada.texto}</p>
+              </>
+            )}
+          </div>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>

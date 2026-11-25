@@ -1,0 +1,17 @@
+---
+import { iconos, type NombreIcono } from '../../lib/iconos';
+
+interface Props {
+  nombre: NombreIcono;
+  class?: string;
+  etiqueta?: string;
+}
+
+const { nombre, class: className = 'size-6', etiqueta } = Astro.props;
+const svg = iconos[nombre].replace('<svg ', `<svg class="${className}" `);
+const accesible = etiqueta
+  ? svg.replace('<svg ', `<svg role="img" aria-label="${etiqueta}" `)
+  : svg.replace('<svg ', '<svg aria-hidden="true" focusable="false" ');
+---
+
+<Fragment set:html={accesible} />

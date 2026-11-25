@@ -1,0 +1,28 @@
+---
+import Pending from '../ui/Pending.astro';
+import { testimonios } from '../../data/vitalis';
+---
+
+{testimonios ? (
+  <section id="testimonios" class="bg-arena-100 px-4 py-16 sm:px-6 lg:py-24">
+    <div class="mx-auto max-w-6xl">
+      <h2 class="heading-2 max-w-170" data-reveal>
+        Lo que dicen los tutores
+      </h2>
+      <ul class="mt-12 grid gap-4 md:grid-cols-3">
+        {testimonios.map((t) => (
+          <li class="rounded-3xl bg-crema-50 p-6" data-reveal>
+            <blockquote class="body-3">“{t.texto}”</blockquote>
+            <p class="body-6 mt-4 text-tinta-600">
+              {t.nombre}, con {t.mascota}
+            </p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+) : (
+  <div class="px-4 sm:px-6">
+    <Pending dato="testimonios reales de tutores (la sección no se muestra hasta tenerlos)" />
+  </div>
+)}

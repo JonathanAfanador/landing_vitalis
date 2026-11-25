@@ -1,0 +1,77 @@
+---
+import { Picture } from 'astro:assets';
+import Icono from '../ui/Icono.astro';
+import Pending from '../ui/Pending.astro';
+import { negocio } from '../../data/vitalis';
+import recepcion from '../../assets/fotos/recepcion.jpg';
+
+const datos = [
+  {
+    icono: 'map-pin',
+    titulo: 'Dirección',
+    valor: negocio.direccion,
+    extra: `${negocio.ciudad}, ${negocio.departamento}`,
+  },
+  { icono: 'clock', titulo: 'Horario', valor: negocio.horario, extra: null },
+  { icono: 'first-aid', titulo: 'Urgencias', valor: negocio.urgencias, extra: null },
+] as const;
+---
+
+<section id="ubicacion" class="bg-arena-100 px-4 py-16 sm:px-6 lg:py-24">
+  <div class="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2">
+    <div data-reveal>
+      <p class="caption-3 text-dorado-700">Ubicación y horarios</p>
+      <h2 class="heading-2 mt-3">Te esperamos en Girardot</h2>
+      <dl class="mt-8 flex flex-col gap-6">
+        {datos.map((dato) => (
+          <div class="flex gap-4">
+            <dt class="grid size-12 shrink-0 place-items-center rounded-full bg-crema-50 text-dorado-700">
+              <Icono nombre={dato.icono} etiqueta={dato.titulo} />
+            </dt>
+            <dd>
+              <p class="title-2">{dato.valor ?? dato.titulo}</p>
+              {dato.extra && <p class="body-6 text-tinta-600">{dato.extra}</p>}
+              {!dato.valor && <Pending dato={dato.titulo.toLowerCase()} class="mt-1" />}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      {negocio.mapa ? (
+        <div class="mt-8 aspect-video overflow-hidden rounded-3xl bg-crema-50" data-mapa={negocio.mapa}>
+          <button type="button" class="btn-principal m-6" data-mapa-cargar>
+            <Icono nombre="map-pin" class="size-5" />
+            Ver en el mapa
+          </button>
+        </div>
+      ) : (
+        <Pending dato="enlace de Google Maps para el mapa" class="mt-8" />
+      )}
+    </div>
+
+    <Picture
+      src={recepcion}
+      alt="Recepción de Vitalis: letrero iluminado con el perro y el gato, mostrador blanco con luz cálida, flores y afiche de bienvenida"
+      formats={['avif', 'webp']}
+      widths={[400, 600, 900]}
+      sizes="(min-width: 768px) 45vw, 92vw"
+      class="aspect-3/4 w-full rounded-t-full object-cover outline outline-offset-8 outline-dorado-400"
+      data-reveal
+    />
+  </div>
+</section>
+
+<script>
+  // El mapa de Google solo carga cuando la persona lo pide: sin cookies de terceros ni peso inicial.
+  document.querySelector('[data-mapa-cargar]')?.addEventListener('click', (event) => {
+    const contenedor = (event.currentTarget as HTMLElement).closest<HTMLElement>('[data-mapa]');
+    if (!contenedor?.dataset.mapa) return;
+    const iframe = document.createElement('iframe');
+    iframe.src = contenedor.dataset.mapa;
+    iframe.title = 'Mapa de la ubicación de Vitalis Centro Veterinario';
+    iframe.loading = 'lazy';
+    iframe.referrerPolicy = 'no-referrer-when-downgrade';
+    iframe.className = 'size-full border-0';
+    contenedor.replaceChildren(iframe);
+  });
+</script>

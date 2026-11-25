@@ -1,0 +1,60 @@
+---
+import Icono from '../ui/Icono.astro';
+import Pending from '../ui/Pending.astro';
+import { cta, procedimientos, procesoOrtopedia, servicios } from '../../data/vitalis';
+import type { NombreIcono } from '../../lib/iconos';
+---
+
+<section id="servicios" class="bg-arena-100 px-4 py-16 sm:px-6 lg:py-24">
+  <div class="mx-auto max-w-6xl">
+    <div class="max-w-170" data-reveal>
+      <p class="caption-3 text-dorado-700">Servicios</p>
+      <h2 class="heading-2 mt-3">Especialistas en cómo se mueve tu mascota</h2>
+      <p class="body-3 mt-4 text-tinta-600">
+        Cuando una mascota cojea, pierde fuerza o se recupera de una lesión, necesita a alguien que conozca
+        sus huesos, sus articulaciones y su columna.
+      </p>
+    </div>
+
+    <ul class="mt-12 grid gap-4 md:grid-cols-3">
+      {servicios.map((servicio) => (
+        <li class="rounded-3xl bg-crema-50 p-6" data-reveal>
+          <span class="grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+            <Icono nombre={servicio.icono as NombreIcono} />
+          </span>
+          <h3 class="heading-5 mt-6">{servicio.titulo}</h3>
+          <p class="body-3 mt-2 text-tinta-600">{servicio.texto}</p>
+        </li>
+      ))}
+    </ul>
+
+    {procedimientos ? (
+      <ul class="mt-6 flex flex-wrap gap-2">
+        {procedimientos.map((p) => (
+          <li class="body-6 rounded-full bg-crema-50 px-4 py-2">{p}</li>
+        ))}
+      </ul>
+    ) : (
+      <Pending dato="lista verificada de procedimientos que realiza el doctor" class="mt-6" />
+    )}
+
+    <div class="mt-16 grid gap-8 lg:grid-cols-[1fr_2fr] lg:items-start" data-reveal>
+      <div>
+        <h3 class="heading-4">Así es el proceso</h3>
+        <a href={cta.secundario.href} class="btn-principal mt-6">
+          <Icono nombre="calendar-check" class="size-5" />
+          {cta.secundario.texto}
+        </a>
+      </div>
+      <ol class="grid gap-4 sm:grid-cols-3">
+        {procesoOrtopedia.map((paso, i) => (
+          <li class="rounded-3xl border border-azul-900/10 p-6">
+            <span class="font-serif text-4xl font-semibold text-dorado-700">{i + 1}</span>
+            <h4 class="title-1 mt-2">{paso.titulo}</h4>
+            <p class="body-6 mt-2 text-tinta-600">{paso.texto}</p>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </div>
+</section>

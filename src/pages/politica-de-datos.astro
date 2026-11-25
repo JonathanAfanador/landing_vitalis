@@ -1,0 +1,49 @@
+---
+import Pagina from '../layouts/Pagina.astro';
+import Pending from '../components/ui/Pending.astro';
+import { contacto, negocio } from '../data/vitalis';
+---
+
+<Pagina
+  titulo="Política de tratamiento de datos · Vitalis"
+  descripcion="Cómo trata Vitalis Centro Veterinario tus datos personales, según la Ley 1581 de 2012."
+>
+  <article class="mx-auto max-w-3xl [&_h2]:heading-5 [&_h2]:mt-10 [&_p]:body-3 [&_p]:mt-4 [&_p]:text-tinta-600 [&_li]:body-3 [&_li]:text-tinta-600 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-6">
+    <h1 class="heading-2">Política de tratamiento de datos personales</h1>
+    <Pending dato="revisión legal de este borrador" class="mt-4" />
+
+    <h2>Responsable</h2>
+    <p>
+      {negocio.nombre}, {negocio.ciudad}, {negocio.departamento}, Colombia.
+    </p>
+    <Pending dato="razón social, NIT, dirección y correo de contacto del responsable" />
+
+    <h2>Qué datos recogemos</h2>
+    <p>
+      Los que escribes en los formularios de la web: nombre, teléfono, correo (opcional), dirección y
+      municipio de entrega, nombre y especie de tu mascota y el motivo de la consulta.
+    </p>
+
+    <h2>Para qué los usamos</h2>
+    <ul>
+      <li>Gestionar tus pedidos de medicamentos y confirmarlos por WhatsApp.</li>
+      <li>Agendar y atender las citas de tu mascota.</li>
+      <li>Responder tus preguntas.</li>
+    </ul>
+    <p>No vendemos ni compartimos tus datos con terceros para publicidad.</p>
+
+    <h2>Tus derechos</h2>
+    <p>
+      Según la Ley 1581 de 2012 y el Decreto 1377 de 2013, puedes conocer, actualizar, rectificar y pedir que
+      se supriman tus datos, revocar la autorización y presentar quejas ante la Superintendencia de Industria
+      y Comercio.
+    </p>
+
+    <h2>Cómo ejercerlos</h2>
+    {contacto.correo ? (
+      <p>Escríbenos a {contacto.correo}.</p>
+    ) : (
+      <Pending dato="canal para consultas y reclamos" />
+    )}
+  </article>
+</Pagina>
