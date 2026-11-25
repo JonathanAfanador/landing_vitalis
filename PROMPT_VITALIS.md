@@ -23,19 +23,22 @@ Usa las skills landing-page-design y ui-ux-pro-max (están en .claude/skills/) y
 2. Comprueba requisitos: Node.js ≥ 22.12, pnpm y ffmpeg/ffprobe (en Windows: `winget install Gyan.FFmpeg`). Si falta algo, dime el comando para instalarlo.
 3. Inicia el proyecto Astro en la raíz del repo con pnpm (TypeScript strict) y añade solo lo necesario: Tailwind CSS 4 (@tailwindcss/vite), GSAP (ScrollTrigger), Lenis, sharp, @astrojs/sitemap y el adaptador del hosting elegido (ver sección 4). Iconos SVG (Phosphor o Lucide), nunca emojis como iconos.
 4. Configura ESLint + Prettier, `.editorconfig`, `.gitignore` (node_modules, dist, .env, media/) y un `.env.example` documentado. Ningún secreto en el repo.
-5. Copia el material de `C:\Users\jonathan.DESKTOP-VV9J5N6\Desktop\Archivo_vet` a `media/originales/` (carpeta ignorada por git: es material de trabajo, no se publica).
+5. El material ya está en el repo, en `recursos/` (lee `recursos/README.md`): originales del logo y de la recepción, imágenes en WebP/AVIF, los 3 clips del recorrido ya codificados para scrub y sus pósters. Muévelo a donde corresponda en Astro (`src/assets/` las imágenes y pósters, `public/video/` los clips). No vuelvas a codificar los clips salvo que haga falta.
 
 ## 2. Optimización de imágenes y vídeos (obligatorio antes de usarlos)
 
+Logo:
+- Vectoriza `recursos/originales/logo-vitalis.jpg` a SVG (potrace, una capa por color: azul marino y dorado) para que quede nítido a cualquier tamaño. Saca dos versiones: el logo completo y el isotipo (perro + gato + círculo). El isotipo será el favicon. Si el trazo de pincel del círculo queda feo al vectorizar, dímelo y usamos el WebP de `recursos/imagenes/`.
+
 Imágenes:
-- Revisa una por una y descarta las borrosas, repetidas o mal encuadradas (dime cuáles).
+- Si te paso más fotos, revisa una por una y descarta las borrosas, repetidas o mal encuadradas (dime cuáles).
 - Las que se usen en componentes van en `src/assets/` y se sirven con <Picture> / <Image> de astro:assets en AVIF + WebP, con `widths` y `sizes` reales, `loading="lazy"` salvo la imagen del hero (`fetchpriority="high"`), y width/height siempre definidos para no generar CLS.
 - Nombra los archivos de forma descriptiva y en minúsculas (`recepcion.jpg`, `quirofano.jpg`…), no `IMG_2034.jpg`.
 - Quita metadatos EXIF (ubicación GPS incluida).
 - Las fotos que se enlacen desde JSON-LD o el sitemap van además en `public/photos/` como JPG a 1600 px, calidad ~80.
 - Genera `og-image.jpg` (1200×630), favicon SVG + ICO, apple-touch-icon y los iconos del manifest.
 
-Vídeos:
+Vídeos (los 3 clips de `recursos/video/` ya cumplen esto; aplica lo mismo a cualquier vídeo nuevo):
 - Sin audio, H.264 en MP4, `-movflags +faststart`, máximo 1080p (y una versión 720p para móvil si el ahorro es grande), CRF 26–30. Objetivo: cada clip ≤ 3 MB.
 - Los clips que se usen en el scroll world llevan keyframe cada 6 fotogramas y color marcado como BT.709/sRGB para que el póster y el vídeo no cambien de tono (mismo comando que en el README de midudev):
   ffmpeg -i in.mp4 -an -vf "scale=1920:-2" -c:v libx264 -preset slow -crf 28 -g 6 -keyint_min 6 -sc_threshold 0 -pix_fmt yuv420p -color_primaries bt709 -color_trc iec61966-2-1 -colorspace bt709 -color_range tv -movflags +faststart+write_colr out.mp4
@@ -46,7 +49,7 @@ Vídeos:
 
 - Nombre: VITALIS CENTRO VETERINARIO.
 - Ubicación: Girardot, Cundinamarca, Colombia. Dirección: [COMPLETAR]. Coordenadas: [COMPLETAR o sácalas del enlace de Google Maps: COMPLETAR].
-- Especialidad: el médico veterinario que opera está especializado en procedimientos de ortopedia (fracturas, luxaciones, cirugía de rodilla/cadera, etc.). Lista verificada de procedimientos que realiza: [COMPLETAR]. Si no la tengo, marca la lista como pendiente; no la inventes.
+- Servicios (así aparecen en su logo): Ortopedia • Neurocirugía • Rehabilitación. El médico veterinario que opera está especializado en procedimientos de ortopedia. Lista verificada de procedimientos que realiza: [COMPLETAR]. Si no la tengo, marca la lista como pendiente; no la inventes.
 - Doctor: nombre [COMPLETAR], tarjeta profesional / formación [COMPLETAR].
 - Tienda: se venden SOLO medicamentos veterinarios (no alimentos, no accesorios).
 - Acción principal: pedir medicamentos (catálogo → pedido que se confirma por WhatsApp).
@@ -61,18 +64,25 @@ Vídeos:
 
 ## 4. Diseño
 
-- Paleta base: dorado cálido, blanco y azul. ANTES de fijarla, analiza las fotos y vídeos de Archivo_vet, extrae los colores reales del lugar (paredes, logo, uniformes, luz) y ajusta la paleta a ellos. Devuélveme los tokens con su hex y el contraste de cada combinación texto/fondo.
-  Punto de partida orientativo (ajústalo con las imágenes): dorado #C8963E, blanco cálido #FBF8F2, azul profundo #1E3A5F.
-  Ojo: el dorado sobre blanco no da contraste para texto. Úsalo como acento (líneas, iconos, fondos de sección, detalles); el texto y los botones principales en azul o con texto oscuro sobre dorado.
-- Ambiente: cálido. Fondos claros y cremosos, luz cálida, esquinas suaves, fotografía real protagonista. Nada de estética fría de hospital, nada de clipart de patitas genérico ni de plantilla SaaS.
-- Tipografía: elígela con landing-page-design y ui-ux-pro-max buscando "cálida, cercana y profesional". Fuentes servidas desde el propio dominio, recortadas a latín, sin cursivas ni negritas sintéticas.
-- Layout: scroll world como en Arko. La portada es un recorrido por la clínica (entrada → recepción → consultorio → quirófano/ortopedia → farmacia) que avanza y retrocede con el scroll usando los vídeos reales de Archivo_vet (sin generar vídeos con IA, salvo que te lo pida). Un texto corto por parada. Carga por cercanía, pósters debajo, sin vídeo con reduced-motion o ahorro de datos, y el truco de play()/pause() para iOS. Si los vídeos no sirven para un recorrido continuo, dímelo y propón la alternativa (por ejemplo, un vídeo de fondo por sección).
+- Paleta: sale del logo real (colores medidos sobre el archivo original):
+  - Azul marino de marca: #071834 (texto principal, botones, fondos oscuros).
+  - Dorado de marca: #CCA76C (acento: líneas, iconos, el círculo del logo, detalles y fondos suaves).
+  - Blanco y un blanco cálido/crema para fondos (propón el hex; las paredes de la clínica son blancas con luz LED cálida).
+  Calcula y devuélveme el contraste de cada combinación texto/fondo. Ojo: el dorado sobre blanco no da contraste para texto (úsalo solo como acento o con texto azul marino encima). El letrero real de la recepción se ilumina en azul: puedes usar un azul más luminoso como acento secundario si encaja, pero sin romper la paleta.
+- Ambiente: cálido. Lo que se ve en el material: paredes y estanterías blancas con tiras LED de luz cálida, el letrero retroiluminado, flores, modelos de huesos y columnas en las estanterías, libros de ortopedia y diplomas enmarcados. Fondos claros y cremosos, luz cálida, esquinas suaves, fotografía real protagonista. Nada de estética fría de hospital, nada de clipart de patitas genérico ni de plantilla SaaS. El motivo gráfico puede ser el círculo de pincel dorado del logo y los huesos/columna del isotipo.
+- Tipografía: el logo usa una serif clásica de mayúsculas romanas para "VITALIS" y una sans geométrica espaciada para "CENTRO VETERINARIO". Elige con landing-page-design y ui-ux-pro-max un par de Google Fonts que se parezca (por ejemplo, Cinzel o Cormorant para titulares y Montserrat o similar para el texto; decide tú y justifícalo). Fuentes servidas desde el propio dominio, recortadas a latín, sin cursivas ni negritas sintéticas.
+- Layout: scroll world como en Arko, con los 3 clips reales de `recursos/video/` (sin generar vídeos con IA). El vídeo original es VERTICAL (9:16, 576×1024) y tiene 2 cortes, por eso está dividido en 3 tramos, uno por parada:
+  1. `recorrido-1-recepcion.mp4` (22,7 s): letrero retroiluminado de la recepción, flores, afiche de bienvenida y un diploma.
+  2. `recorrido-2-estanteria-dorada.mp4` (4,3 s): estanterías iluminadas con figuras doradas y plantas.
+  3. `recorrido-3-modelos-oseos.mp4` (15,6 s): estanterías con modelos de huesos y columna, libros de ortopedia y diplomas.
+  En escritorio, el vídeo va fijado a un lado a toda la altura (vertical, con el borde superior en arco o en círculo como el logo) y el texto de cada parada al otro lado. En móvil, el vídeo ocupa toda la pantalla de fondo y el texto va encima con un velo para que se lea. Un texto corto por parada que conecte lo que se ve con el servicio (recepción → bienvenida/confianza; estanterías → cuidado; modelos óseos → ortopedia, neurocirugía y rehabilitación). Carga por cercanía, pósters de `recursos/posters/` debajo, sin vídeo con reduced-motion o ahorro de datos, y el truco de play()/pause() para iOS.
+  No uses como contenido los textos de los diplomas ni del afiche (nombres, universidades, frases): no están verificados. Si quieres usarlos, pregúntame.
 - Cabecera tipo píldora flotante, botón flotante de WhatsApp con aria-label, y la sección de tagline obligatoria de la skill.
 
 Secciones propuestas (ajústalas con la skill y justifícalo):
-1. Hero / scroll world por la clínica.
+1. Hero / scroll world por la clínica (3 paradas).
 2. Tagline.
-3. Ortopedia veterinaria: qué se trata, cómo es el proceso (valoración → cirugía → recuperación), y CTA a agendar valoración.
+3. Servicios: Ortopedia, Neurocirugía y Rehabilitación. Qué se trata en cada uno, cómo es el proceso (valoración → cirugía → recuperación/rehabilitación) y CTA a agendar valoración.
 4. El doctor (solo datos verificados).
 5. Tienda de medicamentos: buscador, filtros por especie y categoría, tarjetas de producto, carrito y pedido.
 6. Cómo pedir en 3 pasos.
@@ -115,7 +125,7 @@ Hosting: recomiéndame uno (Vercel o Cloudflare) según el adaptador y la base d
 
 ## 6. Antes de escribir código, devuélveme
 
-1. La lista de imágenes y vídeos que vas a usar, cuáles descartas y en qué sección va cada uno.
+1. Qué hace cada imagen y cada clip de `recursos/` y en qué sección va (y qué material falta: fotos del doctor, del quirófano, de pacientes, de los medicamentos).
 2. La paleta final con tokens, hex y contrastes, y la tipografía elegida.
 3. Lo que pide el Output format de landing-page-design: outline de la página, copy del hero, beneficios, cómo funciona, FAQ, SEO/AEO y layout recomendado.
 4. El esquema de base de datos (diagrama en texto o Mermaid).
