@@ -2,7 +2,16 @@
 
 Autenticación, roles y permisos, panel `/admin`, citas y pendientes de la Fase 3. No hay código hasta que se apruebe.
 
-Entregas: **4A** autenticación + RBAC + auditoría · **4B** medicamentos, categorías y pedidos · **4C** citas.
+Entregas: **4A** autenticación + RBAC + auditoría · **4B** medicamentos, categorías y pedidos (con el cambio a venta solo en tienda) · **4C** citas · **4D** portal de clientes.
+
+## Decisiones del usuario (respuestas a la sección 11)
+
+| Tema | Decisión |
+| :-- | :-- |
+| Rol `usuario` | Se crea **con permisos reales de cliente** y un portal mínimo (entrega 4D). Ver la sección 12 |
+| Exportar CSV | **Pospuesto.** Queda en `docs/pendientes.md` y se recuerda al cerrar cada entrega |
+| Envíos | **No hay domicilios: solo venta y recogida en la clínica.** Se quita `enviado` y se dejan de pedir dirección y municipio. Ver la sección 13 |
+| Aviso por WhatsApp al confirmar | **No se hace ahora.** Queda en pendientes |
 
 ---
 
@@ -85,7 +94,7 @@ Más el `USAGE` de las secuencias necesarias. Los dos roles tienen `statement_ti
 | :-- | :-- | :-- |
 | superadmin | Sistema, intocable | Bypass explícito en **un solo lugar**: `can()` devuelve `true` si el rol es superadmin. Es el único que gestiona roles |
 | admin | Sistema, permisos editables | Operación del día a día |
-| usuario | Sistema | **Ver la pregunta 1** |
+| usuario | Sistema, permisos editables | Cuenta de cliente del portal (4D). Solo ve y toca lo suyo |
 | invitado | Implícito | No existe en la base: es quien no tiene sesión (tienda, pedido, citas) |
 | Personalizados | Creados por el superadmin | Crear, editar, duplicar y eliminar (solo si no tienen usuarios) |
 
@@ -110,6 +119,11 @@ Cada permiso corresponde a una comprobación real en el código. Los que exponen
 | | `usuarios:gestionar` | Crear usuarios, desactivarlos y restablecer contraseñas | ver |
 | | `usuarios:asignar_roles` | Cambiar el rol de otros usuarios (con anti-escalada) | ver |
 | Auditoría | `auditoria:ver` | Ver el registro de actividad | |
+| Mi cuenta | `cuenta:ver_pedidos` | Ver **sus** pedidos y su estado | |
+| | `cuenta:ver_citas` | Ver **sus** citas y su estado | |
+| | `cuenta:cancelar_cita` | Cancelar **sus** citas solicitadas o confirmadas | ver_citas |
+| | `cuenta:editar_perfil` | Cambiar su nombre, teléfono y contraseña | |
+| | `cuenta:eliminar` | Pedir la eliminación de su cuenta (derecho de supresión, Ley 1581) | |
 
 **Cambios respecto al prompt:**
 - **`roles:gestionar` no es asignable.** El prompt dice que solo el superadmin gestiona roles; si existiera como permiso, se podría dar a otro rol y se rompería esa regla. Queda como capacidad exclusiva del superadmin dentro de `can()`.
@@ -128,6 +142,7 @@ Cada permiso corresponde a una comprobación real en el código. Los que exponen
 | citas:ver / gestionar | | ✔ | |
 | usuarios:ver / gestionar / asignar_roles | | | |
 | auditoria:ver | | | |
+| cuenta:* | | | ✔ |
 
 ### Sincronización código → base
 
@@ -259,12 +274,12 @@ En `detalle` van IDs y valores antes/después, **nunca** nombres, teléfonos ni 
 
 ## 6. Máquinas de estado
 
-**Pedido:**
+**Pedido** (solo recogida en la clínica):
 
 ```text
-pendiente ──► confirmado ──► enviado ──► entregado
-    │              │      └────────────► entregado (recogido en la clínica)
-    └──────────────┴──► cancelado (devuelve el stock)
+pendiente ──► confirmado (listo para recoger) ──► entregado
+    │                    │
+    └────────────────────┴──► cancelado (devuelve el stock)
 ```
 
 **Cancelar:**
@@ -338,3 +353,34 @@ Lo detallaré con SQL exacto en `docs/base-de-datos.md`:
 2. **Exportar pedidos y citas (CSV):** no está en las pantallas pedidas y es la salida más delicada de datos personales. **Recomiendo dejarlo para después.** ¿Lo incluyo ahora?
 3. **Estado `enviado`:** lo dejo como paso opcional (confirmado → entregado si recogen en la clínica, o confirmado → enviado → entregado si hay domicilio). ¿De acuerdo?
 4. **Aviso al confirmar una cita o pedido:** lo sencillo con lo que ya existe es un botón "Avisar por WhatsApp" en el panel, que abre WhatsApp con el mensaje escrito y el número del cliente. Lo envía la persona desde su celular, sin servicios de pago. Un envío automático necesita la API de WhatsApp Business o un servicio de correo, y lo dejaría anotado como pendiente. ¿Va el botón?
+
+Respuestas: ver "Decisiones del usuario" al inicio.
+
+## 12. Portal de clientes (entrega 4D)
+
+Cada permiso `cuenta:*` corresponde a una pantalla o Action real, y **siempre sobre los registros propios**.
+
+- **Rutas:** `/cuenta/registro`, `/cuenta/ingresar`, `/cuenta` (mis pedidos y mis citas), `/cuenta/perfil` y `/cuenta/salir`.
+- **Registro:** nombre, correo, teléfono, contraseña y autorización de la Ley 1581. El servidor **siempre** asigna el rol `usuario`, sin importar lo que llegue. Tiene campo trampa y límite por IP.
+- **Mismo sistema de sesiones** que el panel. Un cliente nunca entra a `/admin` porque no tiene permisos de panel. El middleware exige al menos uno, y cada página exige el suyo.
+- **Pedidos y citas hechos con sesión** quedan ligados a la cuenta (`usuario_id`, opcional) y el formulario viene prellenado. Los hechos sin cuenta no se pueden reclamar después: no se ligan por teléfono ni por correo, para no exponer datos de otra persona.
+- **Eliminar cuenta:** desactiva la cuenta, borra sus sesiones y anonimiza nombre, correo y teléfono. Los pedidos se conservan sin datos personales, porque son registro de ventas.
+
+**Datos de clientes en la base:** el portal usa un **tercer rol de base de datos, `vitalis_cuenta`**, con **RLS**. Cada consulta corre en una transacción con `set_config('vitalis.usuario_id', <id de la sesión>, true)`. Las políticas solo dejan ver y tocar filas cuyo `usuario_id` coincida. Así, aunque una consulta olvide el `WHERE`, no puede devolver datos de otro cliente.
+
+Para que RLS no afecte al resto, las otras tablas y roles llevan sus políticas explícitas:
+- `vitalis_admin`: acceso según sus GRANT.
+- `vitalis_app`: `INSERT` y su lectura mínima por columnas.
+
+**Sin correo transaccional no hay verificación de correo ni "olvidé mi contraseña" automático.** Mientras tanto, la clínica restablece la contraseña desde el panel (`usuarios:gestionar`) con cambio obligatorio en el siguiente ingreso. Un servicio de correo gratuito (por ejemplo Resend) necesita un dominio propio; queda en pendientes.
+
+## 13. Cambio a "solo venta en tienda" (entrega 4B)
+
+| Dónde | Cambio |
+| :-- | :-- |
+| Base de datos | Migración no destructiva: `direccion` y `municipio` pasan a opcionales (los datos existentes se conservan) y se dejan de pedir. El enum `estado_pedido` se recrea sin `enviado`: ningún pedido lo usa, así que la migración es segura y lo comprueba antes |
+| `/pedido` | "Datos de entrega" pasa a "Tus datos": nombre, teléfono, correo opcional y notas. Mensaje final: "Te avisaremos cuando esté listo para recoger en la clínica" |
+| Textos | "Cómo pedir", FAQ ("¿Hacen domicilios?" → "No, los pedidos se recogen en la clínica en Girardot"; "¿Cómo pago?" → "Pagas al recoger en la clínica"), términos, tienda y mensaje de WhatsApp |
+| Stock | Se reserva al crear el pedido y vuelve al cancelarlo. Los pedidos que nadie recoge se cancelan a mano desde el panel |
+
+Medios de pago aceptados en la clínica (efectivo, tarjeta, transferencia) siguen pendientes de confirmar.
