@@ -1,0 +1,165 @@
+---
+import { actions, isInputError, type ActionError } from 'astro:actions';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import FormMedicamento from '../../../components/admin/FormMedicamento.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import Aviso from '../../../components/ui/Aviso.astro';
+import Campo from '../../../components/formularios/Campo.astro';
+import { can } from '../../../admin/autorizacion';
+import { listarCategoriasPanel } from '../../../admin/categorias';
+import { permisoDePagina } from '../../../admin/guard';
+import { listarEspeciesPanel, obtenerMedicamentoPanel } from '../../../admin/medicamentos';
+import { formatoCOP } from '../../../lib/formato';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'medicamentos:ver');
+const medicamentoId = Number(Astro.params.id);
+
+const edicion = Astro.getActionResult(actions.admin.medicamentos.editar);
+const ajuste = Astro.getActionResult(actions.admin.medicamentos.ajustarStock);
+const borrado = Astro.getActionResult(actions.admin.medicamentos.eliminar);
+if (borrado?.data) return Astro.redirect('/admin/medicamentos?ok=eliminado', 303);
+if (edicion?.data) return Astro.redirect(`/admin/medicamentos/${medicamentoId}?ok=guardado`, 303);
+if (ajuste?.data) return Astro.redirect(`/admin/medicamentos/${medicamentoId}?ok=stock`, 303);
+
+const m =
+  actor && Number.isInteger(medicamentoId) && medicamentoId > 0
+    ? await obtenerMedicamentoPanel(medicamentoId)
+    : null;
+if (actor && !m) return Astro.redirect('/admin/medicamentos', 303);
+
+const [categorias, especies] = actor
+  ? await Promise.all([listarCategoriasPanel(), listarEspeciesPanel()])
+  : [[], []];
+const erroresEdicion = edicion?.error && isInputError(edicion.error) ? edicion.error.fields : {};
+const erroresAjuste = ajuste?.error && isInputError(ajuste.error) ? ajuste.error.fields : {};
+const mensajes = [edicion?.error, ajuste?.error, borrado?.error]
+  .filter((e): e is ActionError => Boolean(e) && !isInputError(e))
+  .map((e) => e.message);
+const enviado = edicion?.error ? await Astro.request.formData() : null;
+const aviso = { creado: 'Medicamento creado.', guardado: 'Cambios guardados.', stock: 'Stock actualizado.' }[
+  Astro.url.searchParams.get('ok') ?? ''
+];
+const puedeEditar = actor ? can(actor, 'medicamentos:editar') : false;
+---
+
+<AdminLayout titulo={m?.nombre ?? 'Medicamento'}>
+  {!actor || !m ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <a href="/admin/medicamentos" class="body-6 text-tinta-600 hover:text-azul-900">
+        ← Medicamentos
+      </a>
+      <h1 class="heading-3 mt-2">{m.nombre}</h1>
+      <p class="body-6 mt-1 text-tinta-600">
+        {m.presentacion} · {formatoCOP(m.precioCop)} · {m.stock} en stock · {m.activo ? 'Activo' : 'Inactivo'}
+      </p>
+      <div class="mt-6 flex flex-col gap-3">
+        {aviso && <Aviso tipo="exito">{aviso}</Aviso>}
+        {mensajes.map((e) => (
+          <Aviso tipo="error">{e}</Aviso>
+        ))}
+        {Object.keys(erroresEdicion).length > 0 && <Aviso tipo="error">Revisa los campos marcados.</Aviso>}
+      </div>
+
+      {puedeEditar ? (
+        <section class="mt-8" aria-labelledby="titulo-datos">
+          <h2 id="titulo-datos" class="heading-5">
+            Datos
+          </h2>
+          <div class="mt-4">
+            <FormMedicamento
+              action={actions.admin.medicamentos.editar}
+              medicamento={m}
+              categorias={categorias}
+              especies={especies}
+              errores={erroresEdicion}
+              enviado={enviado}
+            />
+          </div>
+        </section>
+      ) : (
+        <dl class="body-6 mt-8 grid max-w-xl grid-cols-[1fr_2fr] gap-3">
+          <dt class="text-tinta-600">Principio activo</dt>
+          <dd>{m.principioActivo}</dd>
+          <dt class="text-tinta-600">Laboratorio</dt>
+          <dd>{m.laboratorio}</dd>
+          <dt class="text-tinta-600">Registro ICA</dt>
+          <dd>{m.registroIca ?? 'Sin registrar'}</dd>
+          <dt class="text-tinta-600">Fórmula</dt>
+          <dd>{m.requiereFormula ? 'Requiere fórmula' : 'Venta libre'}</dd>
+        </dl>
+      )}
+
+      {can(actor, 'medicamentos:ajustar_stock') && (
+        <section class="mt-10 max-w-xl rounded-3xl bg-arena-100 p-6" aria-labelledby="titulo-stock">
+          <h2 id="titulo-stock" class="heading-5">
+            Ajustar stock
+          </h2>
+          <p class="body-6 mt-1 text-tinta-600">
+            Hoy hay {m.stock} unidades. El cambio queda registrado con su motivo.
+          </p>
+          <form
+            method="POST"
+            action={actions.admin.medicamentos.ajustarStock}
+            class="mt-4 flex flex-col gap-4"
+          >
+            <input type="hidden" name="medicamentoId" value={m.id} />
+            <Campo
+              name="stock"
+              etiqueta="Unidades disponibles"
+              type="number"
+              required
+              min={0}
+              max={100000}
+              value={String(m.stock)}
+              error={erroresAjuste.stock?.[0]}
+            />
+            <Campo
+              name="motivo"
+              etiqueta="Motivo"
+              required
+              maxlength={200}
+              placeholder="Llegó pedido del proveedor"
+              error={erroresAjuste.motivo?.[0]}
+            />
+            <button type="submit" class="btn-principal self-start">
+              Guardar stock
+            </button>
+          </form>
+        </section>
+      )}
+
+      {can(actor, 'medicamentos:eliminar') && (
+        <section
+          class="mt-10 max-w-xl rounded-3xl border border-error-700/30 p-6"
+          aria-labelledby="titulo-eliminar"
+        >
+          <h2 id="titulo-eliminar" class="heading-6">
+            Eliminar
+          </h2>
+          <p class="body-6 mt-1 text-tinta-600">
+            Solo para medicamentos creados por error que nunca estuvieron en un pedido. Para quitarlo de la
+            tienda, desactívalo.
+          </p>
+          <form
+            method="POST"
+            action={actions.admin.medicamentos.eliminar}
+            class="mt-4"
+            data-confirmar={`¿Eliminar ${m.nombre}? No se puede deshacer.`}
+          >
+            <input type="hidden" name="medicamentoId" value={m.id} />
+            <button
+              type="submit"
+              class="btn min-h-10 border border-error-700/40 px-4 text-sm text-error-700 hover:bg-error-700/10"
+            >
+              Eliminar medicamento
+            </button>
+          </form>
+        </section>
+      )}
+    </>
+  )}
+</AdminLayout>

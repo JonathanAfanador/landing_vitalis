@@ -21,10 +21,6 @@ export const datosPedidoSchema = z.object({
       z.string().regex(TELEFONO, 'Escribe un número colombiano de 10 dígitos, por ejemplo 300 123 4567.'),
     ),
   email: z.email('Revisa el correo, parece incompleto.').max(120).nullish(),
-  direccion: requerido('Escribe la dirección de entrega.')
-    .min(5, 'Escribe la dirección de entrega.')
-    .max(160),
-  municipio: requerido('Escribe el municipio.').min(2, 'Escribe el municipio.').max(60),
   notas: z.string().trim().max(500, 'Las notas pueden tener hasta 500 caracteres.').nullish(),
   declaraFormula: z.boolean().default(false),
   aceptaDatos: z.boolean().refine((v) => v, 'Necesitamos tu autorización para tratar tus datos.'),

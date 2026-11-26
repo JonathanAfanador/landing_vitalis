@@ -9,6 +9,8 @@ La web usa PostgreSQL en Neon con Drizzle ORM. Las tablas viven en el schema `vi
 | `drizzle/0001_rol_app_y_datos_base.sql` | Crea el rol `vitalis_app` con permisos mínimos y carga especies y categorías |
 | `drizzle/0002_panel_usuarios_roles_auditoria.sql` | Tablas del panel: roles, permisos, rol_permiso, usuarios, sesiones y auditoría |
 | `drizzle/0003_rol_admin_triggers_y_roles_base.sql` | Rol `vitalis_admin`, triggers de protección, roles base y endurece `vitalis_app` |
+| `drizzle/0004_solo_tienda_y_estado_pagado.sql` | Pedidos sin dirección ni municipio y estados pendiente → confirmado → pagado → entregado / cancelado |
+| `drizzle/0005_permisos_panel_catalogo_y_pedidos.sql` | Permisos de `vitalis_admin` para medicamentos, categorías y pedidos |
 | `scripts/sincronizar-permisos.ts` | Copia el catálogo de permisos del código a la base (corre solo con `pnpm db:migrate`) |
 | `scripts/crear-superadmin.ts` | Crea el primer superadmin |
 | `scripts/seed-demo.ts` | Medicamentos de ejemplo `[DEMO]`, solo para desarrollo |
@@ -147,6 +149,30 @@ pnpm db:crear-superadmin
 ```
 
 Restablece la contraseña (pidiéndola por consola), cierra sus sesiones y obliga a cambiarla al entrar. Funciona porque usa las credenciales de dueño de la base, que solo tienes tú. Para no depender de una sola cuenta, crea un segundo superadmin desde el panel.
+
+## Fase 4B: medicamentos, categorías y pedidos en el panel
+
+No hay variables nuevas. Solo:
+
+```bash
+git pull
+```
+
+```bash
+pnpm install
+```
+
+```bash
+pnpm db:migrate
+```
+
+Debe terminar con "Permisos sincronizados: 13 en el catálogo" y listar los 9 permisos nuevos. El rol Administrador los recibe automáticamente; los roles que hayas creado no se tocan.
+
+Si la migración se detiene con "Hay pedidos en estado enviado", es que algún pedido quedó en ese estado (que ya no existe): pásalo a entregado desde el SQL Editor y vuelve a ejecutar `pnpm db:migrate`.
+
+```sql
+UPDATE vitalis.pedidos SET estado = 'entregado' WHERE estado::text = 'enviado';
+```
 
 ## Datos de ejemplo (opcional)
 

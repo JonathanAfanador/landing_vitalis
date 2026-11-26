@@ -17,6 +17,9 @@ const ruta = Astro.url.pathname;
 // El menú solo muestra lo que el usuario puede usar; la autorización real está en cada página y Action.
 const menu: { texto: string; href: string; capacidad?: Capacidad }[] = [
   { texto: 'Resumen', href: '/admin' },
+  { texto: 'Pedidos', href: '/admin/pedidos', capacidad: 'pedidos:ver' },
+  { texto: 'Medicamentos', href: '/admin/medicamentos', capacidad: 'medicamentos:ver' },
+  { texto: 'Categorías', href: '/admin/categorias', capacidad: 'categorias:gestionar' },
   { texto: 'Usuarios', href: '/admin/usuarios', capacidad: 'usuarios:ver' },
   { texto: 'Roles', href: '/admin/roles', capacidad: GESTIONAR_ROLES },
   { texto: 'Auditoría', href: '/admin/auditoria', capacidad: 'auditoria:ver' },

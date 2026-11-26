@@ -1,0 +1,167 @@
+---
+import { actions } from 'astro:actions';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import Aviso from '../../../components/ui/Aviso.astro';
+import { can } from '../../../admin/autorizacion';
+import { permisoDePagina } from '../../../admin/guard';
+import { obtenerPedidoPanel } from '../../../admin/pedidos';
+import { NOMBRE_ESTADO_PEDIDO, siguientesPedido, type EstadoPedido } from '../../../lib/estados';
+import { formatoCOP } from '../../../lib/formato';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'pedidos:ver');
+const pedidoId = Number(Astro.params.id);
+const cambio = Astro.getActionResult(actions.admin.pedidos.cambiarEstado);
+if (cambio?.data) return Astro.redirect(`/admin/pedidos/${pedidoId}?ok=1`, 303);
+
+const pedido =
+  actor && Number.isInteger(pedidoId) && pedidoId > 0 ? await obtenerPedidoPanel(pedidoId) : null;
+if (actor && !pedido) return Astro.redirect('/admin/pedidos', 303);
+
+const fecha = new Intl.DateTimeFormat('es-CO', {
+  dateStyle: 'long',
+  timeStyle: 'short',
+  timeZone: 'America/Bogota',
+});
+const ACCIONES: Record<EstadoPedido, { texto: string; confirmar?: string }> = {
+  pendiente: { texto: 'Volver a pendiente' },
+  confirmado: { texto: 'Confirmar pedido' },
+  pagado: { texto: 'Marcar como pagado', confirmar: '¿Confirmas que recibiste el pago de este pedido?' },
+  entregado: { texto: 'Marcar como entregado', confirmar: '¿El cliente ya recogió el pedido?' },
+  cancelado: {
+    texto: 'Cancelar pedido',
+    confirmar: '¿Cancelar este pedido? Las unidades vuelven al stock. No se puede deshacer.',
+  },
+};
+// Solo los botones que la máquina de estados permite y que el usuario puede usar.
+const botones = pedido
+  ? siguientesPedido(pedido.estado).filter((e) =>
+      can(actor, e === 'cancelado' ? 'pedidos:cancelar' : 'pedidos:cambiar_estado'),
+    )
+  : [];
+---
+
+<AdminLayout titulo={pedido ? `Pedido ${pedido.codigo}` : 'Pedido'}>
+  {!actor || !pedido ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <a href="/admin/pedidos" class="body-6 text-tinta-600 hover:text-azul-900">
+        ← Pedidos
+      </a>
+      <h1 class="heading-3 mt-2">Pedido {pedido.codigo}</h1>
+      <p class="body-6 mt-1 text-tinta-600">
+        {fecha.format(pedido.createdAt)} · Estado:{' '}
+        <strong class="text-azul-900">{NOMBRE_ESTADO_PEDIDO[pedido.estado]}</strong>
+      </p>
+      <div class="mt-6 flex flex-col gap-3">
+        {Astro.url.searchParams.has('ok') && <Aviso tipo="exito">Estado actualizado.</Aviso>}
+        {cambio?.error && <Aviso tipo="error">{cambio.error.message}</Aviso>}
+      </div>
+
+      <div class="mt-8 grid gap-8 lg:grid-cols-[3fr_2fr] lg:items-start">
+        <section aria-labelledby="titulo-lineas">
+          <h2 id="titulo-lineas" class="heading-5">
+            Medicamentos
+          </h2>
+          <ul class="mt-4 divide-y divide-azul-900/10 border-y border-azul-900/10">
+            {pedido.lineas.map((l) => (
+              <li class="flex justify-between gap-4 py-3">
+                <div>
+                  <p class="title-3">{l.nombre}</p>
+                  <p class="body-6 text-tinta-600">
+                    {l.cantidad} × {formatoCOP(l.precioUnitarioCop)}
+                    {l.requiereFormula && ' · Requiere fórmula'}
+                  </p>
+                </div>
+                <p class="title-3 tabular-nums">{formatoCOP(l.cantidad * l.precioUnitarioCop)}</p>
+              </li>
+            ))}
+          </ul>
+          <p class="heading-6 mt-4 text-right">Total {formatoCOP(pedido.totalCop)}</p>
+          {pedido.declaraFormula && (
+            <p class="body-6 mt-4 rounded-2xl bg-arena-100 p-4">
+              El cliente indicó que tiene la fórmula médica veterinaria.
+            </p>
+          )}
+        </section>
+
+        <aside class="flex flex-col gap-6">
+          <section class="rounded-3xl bg-arena-100 p-6" aria-labelledby="titulo-cliente">
+            <h2 id="titulo-cliente" class="heading-6">
+              Cliente
+            </h2>
+            <dl class="body-6 mt-4 flex flex-col gap-2">
+              <div>
+                <dt class="text-tinta-600">Nombre</dt>
+                <dd>{pedido.nombreCliente}</dd>
+              </div>
+              <div>
+                <dt class="text-tinta-600">Celular</dt>
+                <dd>
+                  <a
+                    href={`tel:${pedido.telefono}`}
+                    class="underline decoration-dorado-400 underline-offset-4"
+                  >
+                    {pedido.telefono}
+                  </a>
+                </dd>
+              </div>
+              {pedido.email && (
+                <div>
+                  <dt class="text-tinta-600">Correo</dt>
+                  <dd>{pedido.email}</dd>
+                </div>
+              )}
+              {pedido.direccion && (
+                <div>
+                  <dt class="text-tinta-600">Dirección (pedido antiguo)</dt>
+                  <dd>
+                    {pedido.direccion}, {pedido.municipio}
+                  </dd>
+                </div>
+              )}
+              {pedido.notas && (
+                <div>
+                  <dt class="text-tinta-600">Notas</dt>
+                  <dd>{pedido.notas}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+
+          {botones.length > 0 && (
+            <section class="flex flex-col gap-3" aria-label="Cambiar estado">
+              {botones.map((estado) => (
+                <form
+                  method="POST"
+                  action={actions.admin.pedidos.cambiarEstado}
+                  data-confirmar={ACCIONES[estado].confirmar}
+                >
+                  <input type="hidden" name="pedidoId" value={pedido.id} />
+                  <input type="hidden" name="estado" value={estado} />
+                  <button
+                    type="submit"
+                    class:list={[
+                      'w-full',
+                      estado === 'cancelado'
+                        ? 'btn min-h-11 border border-error-700/40 text-error-700 hover:bg-error-700/10'
+                        : 'btn-principal',
+                    ]}
+                  >
+                    {ACCIONES[estado].texto}
+                  </button>
+                </form>
+              ))}
+            </section>
+          )}
+          {pedido.estado === 'pagado' && (
+            <p class="caption-5 text-tinta-600">Un pedido pagado ya no se cancela desde el panel.</p>
+          )}
+        </aside>
+      </div>
+    </>
+  )}
+</AdminLayout>

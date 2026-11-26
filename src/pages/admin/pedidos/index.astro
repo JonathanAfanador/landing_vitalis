@@ -1,0 +1,113 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import { permisoDePagina } from '../../../admin/guard';
+import { listarPedidosPanel } from '../../../admin/pedidos';
+import { ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO } from '../../../lib/estados';
+import { formatoCOP } from '../../../lib/formato';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'pedidos:ver');
+const estadoParam = Astro.url.searchParams.get('estado');
+const estado = ESTADOS_PEDIDO.find((e) => e === estadoParam) ?? null;
+const { pedidos, siguienteCursor } = actor
+  ? await listarPedidosPanel({ estado, cursor: Astro.url.searchParams.get('cursor') })
+  : { pedidos: [], siguienteCursor: null };
+const siguiente = new URL(Astro.url);
+if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const fecha = new Intl.DateTimeFormat('es-CO', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'America/Bogota',
+});
+const color: Record<string, string> = {
+  pendiente: 'bg-dorado-400/30 text-azul-900',
+  confirmado: 'bg-azul-led/10 text-azul-led',
+  pagado: 'bg-azul-900 text-crema-50',
+  entregado: 'bg-arena-100 text-tinta-600',
+  cancelado: 'bg-error-700/10 text-error-700',
+};
+---
+
+<AdminLayout titulo="Pedidos">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Pedidos</h1>
+      <nav aria-label="Filtrar por estado" class="mt-6 flex flex-wrap gap-2">
+        {[null, ...ESTADOS_PEDIDO].map((e) => (
+          <a
+            href={e ? `/admin/pedidos?estado=${e}` : '/admin/pedidos'}
+            aria-current={e === estado ? 'page' : undefined}
+            class="btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50"
+          >
+            {e ? NOMBRE_ESTADO_PEDIDO[e] : 'Todos'}
+          </a>
+        ))}
+      </nav>
+
+      {pedidos.length ? (
+        <div class="mt-8 rounded-3xl border border-azul-900/10 md:overflow-x-auto">
+          <table class="block w-full text-left md:table md:min-w-3xl">
+            <thead class="caption-3 hidden bg-arena-100 text-dorado-700 md:table-header-group">
+              <tr>
+                <th scope="col" class="px-4 py-3">
+                  Código
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Fecha
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Cliente
+                </th>
+                <th scope="col" class="px-4 py-3 text-right">
+                  Total
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Estado
+                </th>
+              </tr>
+            </thead>
+            <tbody class="body-6 block divide-y divide-azul-900/10 md:table-row-group">
+              {pedidos.map((p) => (
+                <tr class="block py-2 md:table-row md:py-0">
+                  <td class="block px-4 py-1 md:table-cell md:py-3">
+                    <a
+                      href={`/admin/pedidos/${p.id}`}
+                      class="title-3 underline decoration-dorado-400 underline-offset-4"
+                    >
+                      {p.codigo}
+                    </a>
+                  </td>
+                  <td class="block px-4 py-1 text-tinta-600 md:table-cell md:py-3">
+                    {fecha.format(p.fecha)}
+                  </td>
+                  <td class="block px-4 py-1 md:table-cell md:py-3">{p.cliente}</td>
+                  <td class="block px-4 py-1 tabular-nums md:table-cell md:py-3 md:text-right">
+                    {formatoCOP(p.totalCop)}
+                  </td>
+                  <td class="block px-4 py-2 md:table-cell md:py-3">
+                    <span class:list={['caption-3 rounded-full px-2 py-1', color[p.estado]]}>
+                      {NOMBRE_ESTADO_PEDIDO[p.estado]}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
+          No hay pedidos {estado ? 'en este estado' : 'todavía'}.
+        </p>
+      )}
+      {siguienteCursor && (
+        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
+          Pedidos anteriores
+        </a>
+      )}
+    </>
+  )}
+</AdminLayout>

@@ -25,10 +25,11 @@ const actualizado = () =>
     .$onUpdate(() => new Date());
 const SLUG = sql.raw(`'^[a-z0-9]+(-[a-z0-9]+)*$'`);
 
+// Solo venta y recogida en la clínica: pendiente → confirmado → pagado → entregado, o cancelado.
 export const estadoPedido = vitalis.enum('estado_pedido', [
   'pendiente',
   'confirmado',
-  'enviado',
+  'pagado',
   'entregado',
   'cancelado',
 ]);
@@ -111,8 +112,9 @@ export const pedidos = vitalis.table(
     nombreCliente: text('nombre_cliente').notNull(),
     telefono: text('telefono').notNull(),
     email: text('email'),
-    direccion: text('direccion').notNull(),
-    municipio: text('municipio').notNull(),
+    // Ya no se piden (solo recogida en la clínica). Se conservan para los pedidos antiguos.
+    direccion: text('direccion'),
+    municipio: text('municipio'),
     estado: estadoPedido('estado').notNull().default('pendiente'),
     totalCop: integer('total_cop').notNull(),
     notas: text('notas'),

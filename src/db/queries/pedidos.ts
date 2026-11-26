@@ -63,8 +63,6 @@ async function intentarPedido(datos: DatosPedido, ipHash: string) {
         nombreCliente: datos.nombre,
         telefono: datos.telefono,
         email: datos.email,
-        direccion: datos.direccion,
-        municipio: datos.municipio,
         notas: datos.notas,
         totalCop: calculo.totalCop,
         declaraFormula: datos.declaraFormula,

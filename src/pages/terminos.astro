@@ -15,7 +15,13 @@ import { negocio } from '../data/vitalis';
     <h2>Pedidos</h2>
     <p>
       Un pedido hecho en la web es una solicitud. {negocio.nombre} lo confirma por WhatsApp con la
-      disponibilidad, el valor final, el medio de pago y la entrega.
+      disponibilidad, el valor final y los datos para pagar por transferencia.
+    </p>
+
+    <h2>Pago y recogida</h2>
+    <p>
+      El pago se hace por transferencia antes de recoger el pedido. Los pedidos se recogen en la clínica, en
+      {negocio.ciudad}; por ahora no hay domicilios.
     </p>
 
     <h2>Medicamentos con fórmula</h2>
@@ -26,6 +32,6 @@ import { negocio } from '../data/vitalis';
 
     <h2>Precios</h2>
     <p>Los precios están en pesos colombianos.</p>
-    <Pending dato="impuestos, medios de pago, domicilios, cambios y devoluciones" />
+    <Pending dato="impuestos, plazo para recoger, cambios y devoluciones" />
   </article>
 </Pagina>

@@ -1,0 +1,166 @@
+---
+// Formulario de medicamento para crear y editar. El stock inicial solo se pide al crear; después se cambia
+// con "Ajustar stock" (con motivo y registro en la auditoría).
+import Campo from '../formularios/Campo.astro';
+import type { MedicamentoPanel } from '../../admin/medicamentos';
+
+interface Props {
+  action: string;
+  medicamento?: MedicamentoPanel;
+  categorias: { id: number; nombre: string }[];
+  especies: { id: number; nombre: string }[];
+  errores: Record<string, string[] | undefined>;
+  // Lo que se envió, para no perderlo si hubo un error.
+  enviado: FormData | null;
+}
+
+const { action, medicamento: m, categorias, especies, errores, enviado } = Astro.props;
+const valor = (campo: string, inicial?: string | number | null) =>
+  enviado
+    ? String(enviado.get(campo) ?? '')
+    : inicial === null || inicial === undefined
+      ? ''
+      : String(inicial);
+const marcada = (campo: string, inicial: boolean) => (enviado ? enviado.has(campo) : inicial);
+const especiesMarcadas = enviado ? enviado.getAll('especies').map(Number) : (m?.especies ?? []);
+const categoriaElegida = Number(valor('categoriaId', m?.categoriaId));
+const error = (campo: string) => errores[campo]?.[0];
+const select = 'min-h-11 w-full rounded-2xl border border-azul-900/20 bg-crema-50 px-4 text-base';
+---
+
+<form method="POST" action={action} class="flex flex-col gap-6">
+  {m && <input type="hidden" name="medicamentoId" value={m.id} />}
+  <div class="grid gap-4 md:grid-cols-2">
+    <Campo
+      name="nombre"
+      etiqueta="Nombre comercial"
+      required
+      maxlength={120}
+      value={valor('nombre', m?.nombre)}
+      error={error('nombre')}
+    />
+    <Campo
+      name="principioActivo"
+      etiqueta="Principio activo"
+      required
+      maxlength={160}
+      value={valor('principioActivo', m?.principioActivo)}
+      error={error('principioActivo')}
+    />
+    <Campo
+      name="presentacion"
+      etiqueta="Presentación"
+      required
+      maxlength={120}
+      placeholder="Caja x 10 tabletas"
+      value={valor('presentacion', m?.presentacion)}
+      error={error('presentacion')}
+    />
+    <Campo
+      name="laboratorio"
+      etiqueta="Laboratorio"
+      required
+      maxlength={120}
+      value={valor('laboratorio', m?.laboratorio)}
+      error={error('laboratorio')}
+    />
+    <Campo
+      name="registroIca"
+      etiqueta="Registro ICA"
+      maxlength={60}
+      value={valor('registroIca', m?.registroIca)}
+      error={error('registroIca')}
+    />
+    <Campo
+      name="precioCop"
+      etiqueta="Precio en pesos"
+      required
+      inputmode="numeric"
+      maxlength={15}
+      placeholder="45.900"
+      ayuda="Sin decimales. Puedes escribirlo con o sin puntos."
+      value={valor('precioCop', m?.precioCop)}
+      error={error('precioCop')}
+    />
+    {!m && (
+      <Campo
+        name="stock"
+        etiqueta="Unidades disponibles"
+        type="number"
+        required
+        min={0}
+        max={100000}
+        value={valor('stock', 0)}
+        error={error('stock')}
+      />
+    )}
+    <div>
+      <label for="categoria" class="mb-2 block text-sm font-medium">
+        Categoría
+      </label>
+      <select id="categoria" name="categoriaId" required class={select} aria-describedby="error-categoria">
+        <option value="" disabled selected={!categoriaElegida}>
+          Elige una categoría
+        </option>
+        {categorias.map((c) => (
+          <option value={c.id} selected={c.id === categoriaElegida}>
+            {c.nombre}
+          </option>
+        ))}
+      </select>
+      <p id="error-categoria" class="body-6 mt-1 text-error-700">
+        {error('categoriaId')}
+      </p>
+    </div>
+  </div>
+
+  <fieldset>
+    <legend class="mb-2 text-sm font-medium">Para qué especies</legend>
+    <div class="flex flex-wrap gap-4">
+      {especies.map((e) => (
+        <label class="body-6 flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="especies"
+            value={e.id}
+            checked={especiesMarcadas.includes(e.id)}
+            class="size-5 accent-azul-900"
+          />
+          {e.nombre}
+        </label>
+      ))}
+    </div>
+  </fieldset>
+
+  <div class="flex flex-col gap-3">
+    <label class="body-6 flex gap-3">
+      <input
+        type="checkbox"
+        name="requiereFormula"
+        checked={marcada('requiereFormula', m?.requiereFormula ?? false)}
+        class="mt-0.5 size-5 shrink-0 accent-azul-900"
+      />
+      Requiere fórmula médica veterinaria
+    </label>
+    {m && (
+      <label class="body-6 flex gap-3">
+        <input
+          type="checkbox"
+          name="activo"
+          checked={marcada('activo', m.activo)}
+          class="mt-0.5 size-5 shrink-0 accent-azul-900"
+        />
+        Activo (se muestra en la tienda)
+      </label>
+    )}
+  </div>
+
+  <div class="flex flex-wrap gap-3">
+    <button type="submit" class="btn-principal">
+      {m ? 'Guardar cambios' : 'Crear medicamento'}
+    </button>
+    <a href="/admin/medicamentos" class="btn-borde">
+      Volver
+    </a>
+  </div>
+</form>

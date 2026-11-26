@@ -1,0 +1,171 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import Aviso from '../../../components/ui/Aviso.astro';
+import { can } from '../../../admin/autorizacion';
+import { listarCategoriasPanel } from '../../../admin/categorias';
+import { permisoDePagina } from '../../../admin/guard';
+import { listarMedicamentosPanel } from '../../../admin/medicamentos';
+import { formatoCOP } from '../../../lib/formato';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'medicamentos:ver');
+const params = Astro.url.searchParams;
+const q = params.get('q')?.trim().slice(0, 60) ?? '';
+const categoriaId = Number(params.get('categoria')) || null;
+const estadoParam = params.get('estado');
+const estado = estadoParam === 'inactivos' || estadoParam === 'todos' ? estadoParam : 'activos';
+
+const [{ medicamentos, siguienteCursor }, categorias] = actor
+  ? await Promise.all([
+      listarMedicamentosPanel({ q, categoriaId, estado, cursor: params.get('cursor') }),
+      listarCategoriasPanel(),
+    ])
+  : [{ medicamentos: [], siguienteCursor: null }, []];
+
+const siguiente = new URL(Astro.url);
+if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const campo = 'min-h-11 rounded-full border border-azul-900/20 bg-crema-50 px-4';
+const aviso = { creado: 'Medicamento creado.', eliminado: 'Medicamento eliminado.' }[params.get('ok') ?? ''];
+---
+
+<AdminLayout titulo="Medicamentos">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <h1 class="heading-3">Medicamentos</h1>
+        {can(actor, 'medicamentos:crear') && (
+          <a href="/admin/medicamentos/nuevo" class="btn-principal">
+            Nuevo medicamento
+          </a>
+        )}
+      </div>
+      {aviso && (
+        <Aviso tipo="exito" class="mt-6">
+          {aviso}
+        </Aviso>
+      )}
+
+      <form method="get" class="mt-6 flex flex-wrap items-end gap-3" role="search">
+        <div>
+          <label for="q" class="mb-2 block text-sm font-medium">
+            Buscar
+          </label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            value={q}
+            maxlength="60"
+            placeholder="Nombre o principio activo"
+            class={campo}
+          />
+        </div>
+        <div>
+          <label for="categoria" class="mb-2 block text-sm font-medium">
+            Categoría
+          </label>
+          <select id="categoria" name="categoria" class={campo}>
+            <option value="">Todas</option>
+            {categorias.map((c) => (
+              <option value={c.id} selected={c.id === categoriaId}>
+                {c.nombre}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label for="estado" class="mb-2 block text-sm font-medium">
+            Estado
+          </label>
+          <select id="estado" name="estado" class={campo}>
+            <option value="activos" selected={estado === 'activos'}>
+              Activos
+            </option>
+            <option value="inactivos" selected={estado === 'inactivos'}>
+              Inactivos
+            </option>
+            <option value="todos" selected={estado === 'todos'}>
+              Todos
+            </option>
+          </select>
+        </div>
+        <button type="submit" class="btn-principal">
+          Filtrar
+        </button>
+      </form>
+
+      {medicamentos.length ? (
+        <div class="mt-8 rounded-3xl border border-azul-900/10 md:overflow-x-auto">
+          <table class="block w-full text-left md:table md:min-w-3xl">
+            <thead class="caption-3 hidden bg-arena-100 text-dorado-700 md:table-header-group">
+              <tr>
+                <th scope="col" class="px-4 py-3">
+                  Medicamento
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Categoría
+                </th>
+                <th scope="col" class="px-4 py-3 text-right">
+                  Precio
+                </th>
+                <th scope="col" class="px-4 py-3 text-right">
+                  Stock
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  <span class="sr-only">Editar</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody class="body-6 block divide-y divide-azul-900/10 md:table-row-group">
+              {medicamentos.map((m) => (
+                <tr class:list={['block py-2 md:table-row md:py-0', !m.activo && 'text-tinta-600']}>
+                  <td class="block px-4 py-1 md:table-cell md:py-3">
+                    <p class="title-3">{m.nombre}</p>
+                    <p class="text-tinta-600">{m.presentacion}</p>
+                    {!m.activo && <p class="caption-3 mt-1 text-error-700">Inactivo</p>}
+                    {m.requiereFormula && <p class="caption-5 mt-1 text-dorado-700">Requiere fórmula</p>}
+                  </td>
+                  <td class="block px-4 py-1 md:table-cell md:py-3">{m.categoria}</td>
+                  <td class="block px-4 py-1 tabular-nums md:table-cell md:py-3 md:text-right">
+                    {formatoCOP(m.precioCop)}
+                  </td>
+                  <td
+                    class:list={[
+                      'block px-4 py-1 tabular-nums md:table-cell md:py-3 md:text-right',
+                      m.stock === 0 && 'font-semibold text-error-700',
+                    ]}
+                  >
+                    <span class="md:hidden">Stock: </span>
+                    {m.stock}
+                  </td>
+                  <td class="block px-4 py-2 md:table-cell md:py-3 md:text-right">
+                    <a href={`/admin/medicamentos/${m.id}`} class="btn-borde min-h-10 px-4 text-sm">
+                      {can(actor, 'medicamentos:editar') || can(actor, 'medicamentos:ajustar_stock')
+                        ? 'Editar'
+                        : 'Ver'}
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
+          {q || categoriaId || estado !== 'activos'
+            ? 'No hay medicamentos con esos filtros.'
+            : 'Todavía no hay medicamentos. Crea el primero.'}
+        </p>
+      )}
+      {siguienteCursor && (
+        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
+          Ver más
+        </a>
+      )}
+    </>
+  )}
+</AdminLayout>

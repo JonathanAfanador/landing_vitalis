@@ -1,0 +1,101 @@
+---
+import { actions, isInputError, type ActionError } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import SinPermiso from '../../components/admin/SinPermiso.astro';
+import Aviso from '../../components/ui/Aviso.astro';
+import Campo from '../../components/formularios/Campo.astro';
+import { listarCategoriasPanel } from '../../admin/categorias';
+import { permisoDePagina } from '../../admin/guard';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'categorias:gestionar');
+const resultados = [
+  Astro.getActionResult(actions.admin.categorias.crear),
+  Astro.getActionResult(actions.admin.categorias.renombrar),
+  Astro.getActionResult(actions.admin.categorias.eliminar),
+];
+if (resultados.some((r) => r?.data)) return Astro.redirect('/admin/categorias?ok=1', 303);
+const errores = resultados
+  .map((r) => r?.error)
+  .filter((e): e is ActionError => Boolean(e))
+  .map((e) => (isInputError(e) ? 'Escribe un nombre de al menos 2 letras.' : e.message));
+const categorias = actor ? await listarCategoriasPanel() : [];
+---
+
+<AdminLayout titulo="Categorías">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Categorías</h1>
+      <p class="body-6 mt-2 max-w-xl text-tinta-600">
+        Agrupan los medicamentos en la tienda. Una categoría con medicamentos no se puede borrar.
+      </p>
+      <div class="mt-6 flex flex-col gap-3">
+        {errores.map((e) => (
+          <Aviso tipo="error">{e}</Aviso>
+        ))}
+        {Astro.url.searchParams.has('ok') && <Aviso tipo="exito">Cambios guardados.</Aviso>}
+      </div>
+
+      <ul class="mt-8 divide-y divide-azul-900/10 rounded-3xl border border-azul-900/10">
+        {categorias.map((c) => (
+          <li class="flex flex-wrap items-end gap-3 p-4">
+            <form
+              method="POST"
+              action={actions.admin.categorias.renombrar}
+              class="flex flex-1 flex-wrap items-end gap-3"
+            >
+              <input type="hidden" name="categoriaId" value={c.id} />
+              <div class="min-w-48 flex-1">
+                <label for={`categoria-${c.id}`} class="mb-2 block text-sm font-medium">
+                  {c.medicamentos} {c.medicamentos === 1 ? 'medicamento' : 'medicamentos'}
+                </label>
+                <input
+                  id={`categoria-${c.id}`}
+                  name="nombre"
+                  value={c.nombre}
+                  required
+                  minlength="2"
+                  maxlength="60"
+                  class="min-h-11 w-full rounded-full border border-azul-900/20 bg-crema-50 px-4"
+                />
+              </div>
+              <button type="submit" class="btn-borde min-h-11 px-4 text-sm">
+                Renombrar
+              </button>
+            </form>
+            <form
+              method="POST"
+              action={actions.admin.categorias.eliminar}
+              data-confirmar={`¿Borrar la categoría ${c.nombre}?`}
+            >
+              <input type="hidden" name="categoriaId" value={c.id} />
+              <button
+                type="submit"
+                class="btn min-h-11 border border-error-700/40 px-4 text-sm text-error-700 hover:bg-error-700/10 disabled:opacity-40"
+                disabled={c.medicamentos > 0}
+                title={c.medicamentos > 0 ? 'Tiene medicamentos' : undefined}
+              >
+                Borrar
+              </button>
+            </form>
+          </li>
+        ))}
+      </ul>
+
+      <section class="mt-10 max-w-xl rounded-3xl bg-arena-100 p-6" aria-labelledby="titulo-nueva">
+        <h2 id="titulo-nueva" class="heading-5">
+          Nueva categoría
+        </h2>
+        <form method="POST" action={actions.admin.categorias.crear} class="mt-4 flex flex-col gap-4">
+          <Campo name="nombre" etiqueta="Nombre" required minlength={2} maxlength={60} />
+          <button type="submit" class="btn-principal self-start">
+            Crear categoría
+          </button>
+        </form>
+      </section>
+    </>
+  )}
+</AdminLayout>

@@ -14,11 +14,78 @@ type DefPermiso = {
 };
 
 export const MODULOS = {
+  medicamentos: 'Medicamentos',
+  categorias: 'Categorías',
+  pedidos: 'Pedidos',
   usuarios: 'Usuarios',
   auditoria: 'Auditoría',
 } as const;
 
+const ADMIN = ['admin'] as const;
+
 export const PERMISOS = {
+  'medicamentos:ver': {
+    modulo: 'medicamentos',
+    nombre: 'Ver medicamentos',
+    descripcion: 'Ver el catálogo completo en el panel, incluidos los medicamentos inactivos.',
+    porDefecto: ADMIN,
+  },
+  'medicamentos:crear': {
+    modulo: 'medicamentos',
+    nombre: 'Crear medicamentos',
+    descripcion: 'Agregar medicamentos nuevos al catálogo con su stock inicial.',
+    requiere: ['medicamentos:ver'],
+    porDefecto: ADMIN,
+  },
+  'medicamentos:editar': {
+    modulo: 'medicamentos',
+    nombre: 'Editar medicamentos',
+    descripcion: 'Cambiar datos, precio, especies y categoría, y activar o desactivar medicamentos.',
+    requiere: ['medicamentos:ver'],
+    porDefecto: ADMIN,
+  },
+  'medicamentos:ajustar_stock': {
+    modulo: 'medicamentos',
+    nombre: 'Ajustar stock',
+    descripcion: 'Cambiar las unidades disponibles indicando el motivo. Queda en la auditoría.',
+    requiere: ['medicamentos:ver'],
+    porDefecto: ADMIN,
+  },
+  'medicamentos:eliminar': {
+    modulo: 'medicamentos',
+    nombre: 'Eliminar medicamentos',
+    descripcion:
+      'Borrar medicamentos creados por error que nunca estuvieron en un pedido. Los demás solo se desactivan.',
+    requiere: ['medicamentos:ver'],
+    porDefecto: ADMIN,
+  },
+  'categorias:gestionar': {
+    modulo: 'categorias',
+    nombre: 'Gestionar categorías',
+    descripcion: 'Crear y renombrar categorías, y borrar las que no tienen medicamentos.',
+    porDefecto: ADMIN,
+  },
+  'pedidos:ver': {
+    modulo: 'pedidos',
+    nombre: 'Ver pedidos',
+    descripcion: 'Ver los pedidos con el nombre, teléfono y correo del cliente.',
+    datosPersonales: true,
+    porDefecto: ADMIN,
+  },
+  'pedidos:cambiar_estado': {
+    modulo: 'pedidos',
+    nombre: 'Avanzar pedidos',
+    descripcion: 'Marcar pedidos como confirmados, pagados o entregados.',
+    requiere: ['pedidos:ver'],
+    porDefecto: ADMIN,
+  },
+  'pedidos:cancelar': {
+    modulo: 'pedidos',
+    nombre: 'Cancelar pedidos',
+    descripcion: 'Cancelar pedidos pendientes o confirmados. El stock vuelve al catálogo.',
+    requiere: ['pedidos:ver'],
+    porDefecto: ADMIN,
+  },
   'usuarios:ver': {
     modulo: 'usuarios',
     nombre: 'Ver usuarios',

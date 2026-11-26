@@ -29,6 +29,20 @@
       "when": 1795717554282,
       "tag": "0003_rol_admin_triggers_y_roles_base",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795725805325,
+      "tag": "0004_solo_tienda_y_estado_pagado",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795725815011,
+      "tag": "0005_permisos_panel_catalogo_y_pedidos",
+      "breakpoints": true
     }
   ]
 }

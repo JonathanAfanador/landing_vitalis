@@ -79,7 +79,8 @@ const filas = calculo
           <strong class="font-semibold text-azul-900">{formatoCOP(pedido.totalCop)}</strong>.
         </p>
         <p class="body-3 mt-2 text-tinta-600">
-          Te escribiremos para confirmar disponibilidad, pago y entrega.
+          Te escribiremos por WhatsApp para confirmar disponibilidad y enviarte los datos de pago. Cuando esté
+          pagado, lo recoges en la clínica.
         </p>
         <div class="mt-8 flex flex-wrap justify-center gap-3">
           {whatsapp && (
@@ -194,13 +195,14 @@ const filas = calculo
             <dd class="heading-5">{formatoCOP(calculo.totalCop)}</dd>
           </dl>
           <p class="caption-5 mt-2 text-tinta-600">
-            El valor final, el pago y la entrega se confirman por WhatsApp.
+            Te confirmamos por WhatsApp y te enviamos los datos para pagar por transferencia. Lo recoges en la
+            clínica.
           </p>
         </section>
 
         <section aria-labelledby="titulo-datos" class="rounded-3xl bg-arena-100 p-6">
           <h2 id="titulo-datos" class="heading-5">
-            Datos de entrega
+            Tus datos
           </h2>
           <form method="POST" action={actions.pedidos.crear} class="mt-6 flex flex-col gap-4">
             <Campo
@@ -235,29 +237,8 @@ const filas = calculo
               error={primerError('email')}
             />
             <Campo
-              name="direccion"
-              etiqueta="Dirección"
-              autocomplete="street-address"
-              required
-              minlength={5}
-              maxlength={160}
-              value={valor('direccion')}
-              error={primerError('direccion')}
-            />
-            <Campo
-              name="municipio"
-              etiqueta="Municipio"
-              autocomplete="address-level2"
-              required
-              minlength={2}
-              maxlength={60}
-              placeholder="Girardot"
-              value={valor('municipio')}
-              error={primerError('municipio')}
-            />
-            <Campo
               name="notas"
-              etiqueta="Notas para la entrega"
+              etiqueta="Notas"
               multilinea
               maxlength={500}
               value={valor('notas')}

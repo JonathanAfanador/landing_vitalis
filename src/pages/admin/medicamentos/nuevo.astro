@@ -1,0 +1,52 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import FormMedicamento from '../../../components/admin/FormMedicamento.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import Aviso from '../../../components/ui/Aviso.astro';
+import { listarCategoriasPanel } from '../../../admin/categorias';
+import { permisoDePagina } from '../../../admin/guard';
+import { listarEspeciesPanel } from '../../../admin/medicamentos';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'medicamentos:crear');
+const resultado = Astro.getActionResult(actions.admin.medicamentos.crear);
+if (resultado?.data) return Astro.redirect(`/admin/medicamentos/${resultado.data.id}?ok=creado`, 303);
+
+const errores = resultado?.error && isInputError(resultado.error) ? resultado.error.fields : {};
+const errorGeneral = resultado?.error && !isInputError(resultado.error) ? resultado.error.message : null;
+const enviado = resultado?.error ? await Astro.request.formData() : null;
+const [categorias, especies] = actor
+  ? await Promise.all([listarCategoriasPanel(), listarEspeciesPanel()])
+  : [[], []];
+---
+
+<AdminLayout titulo="Nuevo medicamento">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Nuevo medicamento</h1>
+      {errorGeneral && (
+        <Aviso tipo="error" class="mt-6">
+          {errorGeneral}
+        </Aviso>
+      )}
+      {Object.keys(errores).length > 0 && (
+        <Aviso tipo="error" class="mt-6">
+          Revisa los campos marcados.
+        </Aviso>
+      )}
+      <div class="mt-8">
+        <FormMedicamento
+          action={actions.admin.medicamentos.crear}
+          categorias={categorias}
+          especies={especies}
+          errores={errores}
+          enviado={enviado}
+        />
+      </div>
+    </>
+  )}
+</AdminLayout>

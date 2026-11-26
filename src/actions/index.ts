@@ -1,5 +1,7 @@
 import { ActionError, defineAction } from 'astro:actions';
 import { auth } from './admin/auth';
+import { catalogoAdmin } from './admin/catalogo';
+import { pedidosAdmin } from './admin/pedidos';
 import { rolesAdmin } from './admin/roles';
 import { usuariosAdmin } from './admin/usuarios';
 import { z } from 'astro/zod';
@@ -17,7 +19,7 @@ const cantidad = (minimo: number) => z.coerce.number().int().min(minimo).max(MAX
 
 export const server = {
   // Panel: cada Action exige sesión y permiso en el servidor (src/admin/guard.ts).
-  admin: { auth, usuarios: usuariosAdmin, roles: rolesAdmin },
+  admin: { auth, usuarios: usuariosAdmin, roles: rolesAdmin, ...catalogoAdmin, pedidos: pedidosAdmin },
 
   // El carrito vive en una cookie HttpOnly. Son formularios: funcionan también sin JavaScript.
   carrito: {
@@ -81,8 +83,6 @@ export const server = {
               nombre: datos.nombre,
               telefono: datos.telefono,
               email: datos.email ?? null,
-              direccion: datos.direccion,
-              municipio: datos.municipio,
               notas: datos.notas || null,
               declaraFormula: datos.declaraFormula,
               aceptaDatos: datos.aceptaDatos,

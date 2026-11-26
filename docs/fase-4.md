@@ -410,3 +410,12 @@ Se reemplaza el carrito en `localStorage` por una cookie `HttpOnly`:
 - **"Agregar", cambiar cantidad y enviar el pedido son formularios** (Actions con `accept: 'form'`): funcionan sin JavaScript (con redirección 303 para no reenviar) y con JavaScript "Agregar" no recarga.
 - **`/pedido` se renderiza en el servidor** con `Cache-Control: private, no-store`. Si el envío falla, vuelve a rellenar los campos y muestra cada error junto a su campo.
 - Se eliminan `src/scripts/cart.ts`, `src/scripts/pedido.ts` y la Action `carrito.resumen`.
+
+## 16. Entrega 4B
+
+- **Migraciones:** `0004` (pedidos sin dirección ni municipio; enum de estados recreado con `pagado` y sin `enviado`, con una comprobación previa) y `0005` (GRANT de `vitalis_admin` para catálogo y pedidos: el panel solo cambia el estado de un pedido, nunca montos ni datos del cliente; el slug de medicamentos y categorías no se edita).
+- **Permisos nuevos (9):** `medicamentos:ver|crear|editar|ajustar_stock|eliminar`, `categorias:gestionar` y `pedidos:ver|cambiar_estado|cancelar`. El rol `admin` los recibe por defecto al crearse.
+- **Máquina de estados** en `src/lib/estados.ts` con pruebas. Cada cambio se aplica con `WHERE estado IN (origenes)`. Cancelar devuelve el stock en la misma transacción y solo si el UPDATE afectó la fila, así que es idempotente y seguro ante cancelaciones simultáneas.
+- **Panel:** medicamentos (listado con filtros y cursor, crear, editar, activar o desactivar, ajustar stock con motivo, eliminar solo si nunca estuvo en pedidos), categorías (crear, renombrar, borrar vacías) y pedidos (listado por estado, detalle y botones según la máquina de estados y los permisos). El resumen muestra los pedidos pendientes.
+- **Solo venta en tienda:** el pedido pide nombre, celular, correo opcional y notas; textos, preguntas frecuentes, términos y política de datos actualizados.
+- **Pruebas contra el servidor:** 53 de 53 (401/403 por Action, roles con permisos parciales, `[DEMO]` rechazado, transiciones inválidas, cancelación doble y triple simultánea con el stock devuelto una vez, borrados protegidos y permisos de la base).

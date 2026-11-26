@@ -5,8 +5,6 @@ import { datosPedidoSchema } from '../../src/lib/validacion';
 const valido = {
   nombre: 'Laura Gómez',
   telefono: '+57 310 555 1234',
-  direccion: 'Calle 19 # 10-25',
-  municipio: 'Girardot',
   declaraFormula: false,
   aceptaDatos: true,
 };

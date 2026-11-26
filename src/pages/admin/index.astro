@@ -3,12 +3,34 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import Icono from '../../components/ui/Icono.astro';
 import { can } from '../../admin/autorizacion';
 import { GESTIONAR_ROLES, type Capacidad } from '../../admin/permisos';
+import { contarPedidosPendientes } from '../../admin/pedidos';
 import type { NombreIcono } from '../../lib/iconos';
 
 export const prerender = false;
 
 const usuario = Astro.locals.usuario;
 const accesos: { titulo: string; texto: string; href: string; icono: NombreIcono; capacidad: Capacidad }[] = [
+  {
+    titulo: 'Pedidos',
+    texto: 'Confirmar, marcar como pagados y entregar los pedidos de la tienda.',
+    href: '/admin/pedidos',
+    icono: 'shopping-bag',
+    capacidad: 'pedidos:ver',
+  },
+  {
+    titulo: 'Medicamentos',
+    texto: 'Catálogo, precios, stock y medicamentos activos en la tienda.',
+    href: '/admin/medicamentos',
+    icono: 'pill',
+    capacidad: 'medicamentos:ver',
+  },
+  {
+    titulo: 'Categorías',
+    texto: 'Cómo se agrupan los medicamentos en la tienda.',
+    href: '/admin/categorias',
+    icono: 'package',
+    capacidad: 'categorias:gestionar',
+  },
   {
     titulo: 'Usuarios',
     texto: 'Cuentas del panel, roles asignados y contraseñas.',
@@ -32,11 +54,24 @@ const accesos: { titulo: string; texto: string; href: string; icono: NombreIcono
   },
 ];
 const visibles = accesos.filter((a) => can(usuario, a.capacidad));
+// Solo un número, sin datos de clientes.
+const pendientes = can(usuario, 'pedidos:ver') ? await contarPedidosPendientes() : null;
 ---
 
 <AdminLayout titulo="Resumen">
   <h1 class="heading-3">Hola, {usuario?.nombre}</h1>
   <p class="body-3 mt-2 text-tinta-600">Tu rol es {usuario?.rolNombre}.</p>
+  {pendientes !== null && (
+    <a
+      href="/admin/pedidos?estado=pendiente"
+      class="mt-6 inline-flex items-center gap-3 rounded-full bg-azul-900 py-2 pr-5 pl-2 text-crema-50"
+    >
+      <span class="grid size-10 place-items-center rounded-full bg-dorado-400 font-semibold text-azul-900 tabular-nums">
+        {pendientes}
+      </span>
+      <span class="body-1">{pendientes === 1 ? 'pedido pendiente' : 'pedidos pendientes'} por confirmar</span>
+    </a>
+  )}
 
   {visibles.length ? (
     <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

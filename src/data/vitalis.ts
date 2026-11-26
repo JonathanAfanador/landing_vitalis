@@ -141,10 +141,11 @@ export const especies = [
 
 export const comoPedir = [
   { titulo: 'Busca', texto: 'Encuentra el medicamento por nombre, especie o categoría.' },
-  { titulo: 'Agrégalo y deja tus datos', texto: 'Elige la cantidad y escribe a dónde lo llevamos.' },
+  { titulo: 'Agrégalo y deja tus datos', texto: 'Elige la cantidad y déjanos tu nombre y tu celular.' },
   {
-    titulo: 'Confirmamos por WhatsApp',
-    texto: 'Te escribimos para confirmar disponibilidad, pago y entrega.',
+    titulo: 'Confirma, paga y recoge',
+    texto:
+      'Te escribimos por WhatsApp con los datos para pagar por transferencia. Luego lo recoges en la clínica.',
   },
 ];
 
@@ -187,8 +188,15 @@ export const preguntas: Pregunta[] = [
     pregunta: '¿Los medicamentos son originales?',
     respuesta: 'Cada ficha muestra el laboratorio y el registro ICA del producto.',
   },
-  { pregunta: '¿Cómo pago mi pedido?', respuesta: null },
-  { pregunta: '¿Hacen domicilios?', respuesta: null },
+  {
+    pregunta: '¿Cómo pago mi pedido?',
+    respuesta:
+      'Por transferencia (Nequi, Daviplata, cuenta bancaria o llave Bre-B). Cuando confirmemos tu pedido por WhatsApp te enviamos los datos de pago.',
+  },
+  {
+    pregunta: '¿Hacen domicilios?',
+    respuesta: 'Por ahora no. Los pedidos se recogen en la clínica en Girardot una vez pagados.',
+  },
   {
     pregunta: '¿Qué animales atienden?',
     respuesta: 'Perros y gatos.',
