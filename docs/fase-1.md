@@ -8,7 +8,7 @@ Entregables de la sección 6 del prompt. No hay código todavía: esto se aprueb
 | :-- | :-- |
 | Tienda | En `/tienda`, con accesos rápidos desde la portada |
 | Hosting | Vercel (plan gratuito) |
-| Base de datos | **Supabase** (plan gratuito, ya enlazado a tu GitHub). Solo se usa su PostgreSQL |
+| Base de datos | **Neon** (PostgreSQL, plan gratuito, región AWS US East 1). Se descartó Supabase porque su plan gratis solo permite 2 proyectos activos y ya estaban en uso |
 | Tipografía | Cormorant Garamond + Manrope, en minúsculas normales (no todo en mayúsculas) |
 | Panel | **Usuarios con roles y permisos**, gestionables desde `/admin` |
 | Skills extra | `webapp-testing` y `supabase-postgres-best-practices` instaladas |
@@ -244,7 +244,7 @@ PostgreSQL con Drizzle ORM. Cambios respecto al modelo del prompt:
 | `ip_hash` en `pedidos` y `solicitudes_cita` | El rate limit sale de una consulta ("¿cuántos envíos desde este hash en 10 minutos?"), sin tabla extra ni Redis. Se guarda un hash con sal, nunca la IP |
 | `updated_at` en `pedidos` y `solicitudes_cita` | Para saber cuándo cambió el estado desde el panel |
 | `usuarios`, `roles`, `permisos`, `rol_permiso` y `sesiones` | Roles y permisos para `/admin` sin librería de autenticación. Contraseña con `scrypt` de `node:crypto`, sesión en cookie `HttpOnly` + `Secure` + `SameSite=Lax`, y en la base solo el hash del token, así se puede revocar. El primer usuario se crea con un script por consola, no hay registro público |
-| Todo en el schema `vitalis`, no en `public` | Supabase publica el schema `public` en su API REST con la clave anónima. Las tablas en un schema propio no salen por ahí. Además se activa RLS sin políticas como segunda barrera |
+| Todo en el schema `vitalis`, no en `public` | Separa las tablas de la app de lo que cree el proveedor y facilita dar permisos solo sobre ese schema |
 | Rol de base de datos `vitalis_app` con permisos mínimos | La app no se conecta como `postgres`. Solo tiene `SELECT/INSERT/UPDATE` donde hace falta y `DELETE` únicamente en `sesiones`, `medicamento_especie` y `rol_permiso` |
 | `ON DELETE RESTRICT` de `pedido_items` a `medicamentos` | Un medicamento con pedidos no se borra: se desactiva (`activo = false`). Así el historial no se rompe |
 | IDs `integer generated always as identity` | Más pequeños y rápidos que UUID. El código público del pedido es aparte (`VIT-7K3Q9`), así no se exponen IDs secuenciales |
@@ -405,11 +405,12 @@ Reglas del servidor:
 
 ## 5. Hosting recomendado
 
-**Vercel + Supabase (PostgreSQL), los dos gratis.** Las rutas de servidor de Astro corren en Node con `@astrojs/vercel`, donde Drizzle con el driver `postgres` y `node:crypto` funcionan sin trucos.
+**Vercel + Neon (PostgreSQL), los dos gratis.** Las rutas de servidor de Astro corren en Node con `@astrojs/vercel`, donde Drizzle con el driver `postgres` y `node:crypto` funcionan sin trucos.
 
-- Conexión de la app por el **pooler de Supabase en modo transacción** (puerto 6543) con `prepare: false`, que es lo que pide ese modo. Las migraciones van por la conexión directa.
-- Ojo con el plan gratuito de Supabase: **pausa el proyecto tras 7 días sin actividad**. Se reactiva desde el panel. Si la web tiene visitas, no pasa.
-- Solo se usa el PostgreSQL de Supabase. Su Auth, Storage y API REST no hacen falta.
+- Neon gratis: 1 GB y 100 horas de cómputo al mes por proyecto, sin tarjeta y sin pausa por inactividad. Se apaga a los 5 minutos sin uso y se enciende solo con la siguiente consulta (la primera tarda un poco más).
+- Región **AWS US East 1 (N. Virginia)**, junto a la región por defecto de las funciones de Vercel (`iad1`).
+- Conexión de la app por el **pooler de Neon** (host con `-pooler`, PgBouncer en modo transacción) con `prepare: false`. Las migraciones van por la conexión directa.
+- El driver `postgres` es estándar: cambiar de proveedor es cambiar la cadena de conexión.
 
 No se despliega nada hasta que lo apruebes.
 
@@ -497,7 +498,7 @@ No hay cookies de analítica ni de terceros (el mapa solo carga al hacer clic), 
 ## 7. Preguntas (solo decisiones; los datos que faltan quedan pendientes)
 
 1. **Tienda en `/tienda`** en vez de dentro de la portada, con accesos rápidos desde la portada. ¿De acuerdo?
-2. **Hosting: Vercel + Neon.** ¿Lo apruebas, o prefieres Cloudflare o Supabase? → Vercel + Supabase.
+2. **Hosting: Vercel + Neon.** ¿Lo apruebas, o prefieres Cloudflare o Supabase? → Vercel + Neon.
 3. **Tipografía: Cormorant Garamond + Manrope.** ¿Te gusta, o prefieres Cinzel en los titulares para parecerse más al logo (todo en mayúsculas)?
 4. **Admin:** un solo tipo de usuario administrador, sin roles. ¿Suficiente?
 5. **Skills extra:** el prompt usa `webapp-testing` y `supabase-postgres-best-practices` "si están instaladas". ¿Las instalo antes de la Fase 2?
