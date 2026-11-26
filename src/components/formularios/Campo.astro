@@ -1,15 +1,16 @@
 ---
-// Campo de formulario con etiqueta visible, ayuda opcional y error junto al campo.
+// Campo de formulario con etiqueta visible, ayuda opcional y error junto al campo (lo pinta el servidor).
 import type { HTMLAttributes } from 'astro/types';
 
 interface Props extends HTMLAttributes<'input'> {
   name: string;
   etiqueta: string;
-  ayuda?: string;
+  ayuda?: string | undefined;
+  error?: string | undefined;
   multilinea?: boolean;
 }
 
-const { name, etiqueta, ayuda, multilinea = false, ...atributos } = Astro.props;
+const { name, etiqueta, ayuda, error, multilinea = false, ...atributos } = Astro.props;
 const id = `campo-${name}`;
 const describe = [ayuda && `${id}-ayuda`, `${id}-error`].filter(Boolean).join(' ');
 const estilo =
@@ -28,15 +29,26 @@ const estilo =
       rows="3"
       class={estilo}
       aria-describedby={describe}
+      aria-invalid={error ? 'true' : undefined}
       maxlength={atributos.maxlength}
+      set:text={atributos.value}
     />
   ) : (
-    <input id={id} name={name} class:list={[estilo, 'min-h-11']} aria-describedby={describe} {...atributos} />
+    <input
+      id={id}
+      name={name}
+      class:list={[estilo, 'min-h-11']}
+      aria-describedby={describe}
+      aria-invalid={error ? 'true' : undefined}
+      {...atributos}
+    />
   )}
   {ayuda && (
     <p id={`${id}-ayuda`} class="caption-5 mt-1 text-tinta-600">
       {ayuda}
     </p>
   )}
-  <p id={`${id}-error`} class="body-6 mt-1 text-error-700" data-error={name}></p>
+  <p id={`${id}-error`} class="body-6 mt-1 text-error-700">
+    {error}
+  </p>
 </div>

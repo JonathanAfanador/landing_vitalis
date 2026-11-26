@@ -8,6 +8,7 @@ import { categorias, especies } from '../../data/vitalis';
 import { obtenerMedicamento } from '../../db/queries/medicamentos';
 import { formatoCOP } from '../../lib/formato';
 import type { NombreIcono } from '../../lib/iconos';
+import { cachearEnCdn, resultadoAgregar } from '../../lib/agregado';
 import { SLUG } from '../../lib/validacion';
 
 export const prerender = false;
@@ -16,7 +17,9 @@ const slug = Astro.params.slug ?? '';
 const m = SLUG.test(slug) ? await obtenerMedicamento(slug) : null;
 if (!m) return new Response(null, { status: 404, statusText: 'No encontrado' });
 
-Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+const agregar = resultadoAgregar(Astro);
+if (agregar.redireccion) return Astro.redirect(agregar.redireccion, 303);
+cachearEnCdn(Astro);
 
 const icono = (categorias.find((c) => c.slug === m.categoriaSlug)?.icono ?? 'pill') as NombreIcono;
 const especiesDe = especies.filter((e) => m.especies.includes(e.slug));
@@ -64,25 +67,7 @@ const ficha = [
           </p>
         )}
 
-        {m.stock > 0 && (
-          <div class="mt-8 flex flex-wrap items-end gap-3">
-            <div>
-              <label for="cantidad" class="caption-3 mb-2 block text-dorado-700">
-                Cantidad
-              </label>
-              <input
-                id="cantidad"
-                type="number"
-                inputmode="numeric"
-                min="1"
-                max={Math.min(m.stock, 99)}
-                value="1"
-                class="min-h-11 w-24 rounded-full border border-azul-900/20 bg-crema-50 px-4 text-base"
-              />
-            </div>
-            <BotonAgregar slug={m.slug} nombre={m.nombre} stock={m.stock} campoCantidad="cantidad" />
-          </div>
-        )}
+        <BotonAgregar slug={m.slug} nombre={m.nombre} stock={m.stock} conCantidad class="mt-8" />
 
         <dl class="mt-10 divide-y divide-azul-900/10 border-y border-azul-900/10">
           {ficha.map((f) => (
@@ -95,5 +80,5 @@ const ficha = [
       </div>
     </div>
   </div>
-  <AvisoCarrito />
+  <AvisoCarrito mensaje={agregar.mensaje} error={agregar.error} />
 </Pagina>

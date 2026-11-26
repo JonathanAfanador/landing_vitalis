@@ -131,11 +131,11 @@ const enlace = (href: string) => (href.startsWith('#') && !enPortada ? `/${href}
 </style>
 
 <script>
-  import { alCambiar, totalUnidades } from '../../scripts/cart';
-
+  // El carrito va en una cookie HttpOnly; esta otra cookie solo trae el número de unidades para el contador.
   const enlaceCarrito = document.querySelector<HTMLElement>('[data-carrito-enlace]');
   const contador = document.querySelector<HTMLElement>('[data-carrito-contador]');
-  const pintarContador = (unidades = totalUnidades()) => {
+  const unidadesGuardadas = () => Number(document.cookie.match(/(?:^|; )vitalis_carrito_n=(\d+)/)?.[1] ?? 0);
+  const pintarContador = (unidades: number) => {
     if (!enlaceCarrito || !contador) return;
     contador.hidden = unidades === 0;
     contador.textContent = String(unidades);
@@ -144,8 +144,10 @@ const enlace = (href: string) => (href.startsWith('#') && !enPortada ? `/${href}
       unidades ? `Tu pedido, ${unidades} ${unidades === 1 ? 'unidad' : 'unidades'}` : 'Tu pedido',
     );
   };
-  pintarContador();
-  alCambiar((items) => pintarContador(totalUnidades(items)));
+  pintarContador(unidadesGuardadas());
+  document.addEventListener('carrito:unidades', (e) => pintarContador((e as CustomEvent<number>).detail));
+  // Al volver con el botón "atrás" el HTML sale de la caché del navegador: se relee la cookie.
+  window.addEventListener('pageshow', () => pintarContador(unidadesGuardadas()));
 
   const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
   const menu = document.querySelector<HTMLElement>('[data-menu]');

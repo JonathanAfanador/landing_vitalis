@@ -479,7 +479,7 @@ No se despliega nada hasta que lo apruebes.
 │   ├── scripts/
 │   │   ├── motion.ts            Lenis + GSAP (apariciones, tagline)
 │   │   ├── world.ts             Scrub del recorrido y cola de carga
-│   │   └── cart.ts              Carrito en localStorage
+│   │   └── (sin carrito en el navegador: va en una cookie HttpOnly, ver src/lib/carrito*.ts)
 │   └── styles/global.css        Tokens de Tailwind y estilos de texto con nombre
 ├── tests/
 │   ├── unit/                    Vitest: totales, Zod, formato COP, WhatsApp

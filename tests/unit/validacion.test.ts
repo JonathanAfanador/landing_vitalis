@@ -1,59 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { pedidoSchema } from '../../src/lib/validacion';
+import { datosPedidoSchema } from '../../src/lib/validacion';
 
+// Así llegan los datos de un formulario a la Action: los campos vacíos como undefined.
 const valido = {
   nombre: 'Laura Gómez',
   telefono: '+57 310 555 1234',
-  email: '',
   direccion: 'Calle 19 # 10-25',
   municipio: 'Girardot',
-  notas: '',
   declaraFormula: false,
   aceptaDatos: true,
-  sitioWeb: '',
-  items: [{ slug: 'antipulgas', cantidad: 2 }],
 };
 
-describe('pedidoSchema', () => {
-  it('acepta un pedido válido y normaliza los datos', () => {
-    const r = pedidoSchema.parse(valido);
+describe('datosPedidoSchema', () => {
+  it('acepta un pedido válido y normaliza el teléfono', () => {
+    const r = datosPedidoSchema.parse(valido);
     expect(r.telefono).toBe('3105551234');
-    expect(r.email).toBeNull();
-    expect(r.notas).toBeNull();
+    expect(r.email).toBeUndefined();
   });
 
   it('exige la autorización de la Ley 1581', () => {
-    expect(pedidoSchema.safeParse({ ...valido, aceptaDatos: false }).success).toBe(false);
+    expect(datosPedidoSchema.safeParse({ ...valido, aceptaDatos: false }).success).toBe(false);
   });
 
   it('rechaza teléfonos que no son colombianos', () => {
-    expect(pedidoSchema.safeParse({ ...valido, telefono: '12345' }).success).toBe(false);
-    expect(pedidoSchema.safeParse({ ...valido, telefono: '2001234567' }).success).toBe(false);
+    expect(datosPedidoSchema.safeParse({ ...valido, telefono: '12345' }).success).toBe(false);
+    expect(datosPedidoSchema.safeParse({ ...valido, telefono: '2001234567' }).success).toBe(false);
   });
 
-  it('rechaza carritos vacíos, repetidos o con cantidades fuera de rango', () => {
-    expect(pedidoSchema.safeParse({ ...valido, items: [] }).success).toBe(false);
-    expect(
-      pedidoSchema.safeParse({
-        ...valido,
-        items: [
-          { slug: 'antipulgas', cantidad: 1 },
-          { slug: 'antipulgas', cantidad: 1 },
-        ],
-      }).success,
-    ).toBe(false);
-    expect(
-      pedidoSchema.safeParse({ ...valido, items: [{ slug: 'antipulgas', cantidad: 100 }] }).success,
-    ).toBe(false);
+  it('da un mensaje claro cuando falta un campo obligatorio', () => {
+    const r = datosPedidoSchema.safeParse({ ...valido, nombre: null });
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0]?.message).toBe('Escribe tu nombre.');
   });
 
-  it('rechaza slugs con caracteres raros', () => {
-    expect(
-      pedidoSchema.safeParse({ ...valido, items: [{ slug: "x'; drop table", cantidad: 1 }] }).success,
-    ).toBe(false);
+  it('valida el correo solo si se escribe', () => {
+    expect(datosPedidoSchema.safeParse({ ...valido, email: null }).success).toBe(true);
+    expect(datosPedidoSchema.safeParse({ ...valido, email: 'laura@correo' }).success).toBe(false);
   });
 
   it('rechaza el envío si el campo trampa trae texto', () => {
-    expect(pedidoSchema.safeParse({ ...valido, sitioWeb: 'http://spam' }).success).toBe(false);
+    expect(datosPedidoSchema.safeParse({ ...valido, sitioWeb: 'http://spam' }).success).toBe(false);
   });
 });

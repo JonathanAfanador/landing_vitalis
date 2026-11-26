@@ -6,10 +6,14 @@ import AvisoCarrito from '../../components/tienda/AvisoCarrito.astro';
 import Icono from '../../components/ui/Icono.astro';
 import Pending from '../../components/ui/Pending.astro';
 import { listarCategorias, listarEspecies, listarMedicamentos } from '../../db/queries/medicamentos';
+import { cachearEnCdn, resultadoAgregar } from '../../lib/agregado';
 import { registrarError } from '../../lib/registro';
 import { SLUG } from '../../lib/validacion';
 
 export const prerender = false;
+
+const agregar = resultadoAgregar(Astro);
+if (agregar.redireccion) return Astro.redirect(agregar.redireccion, 303);
 
 const params = Astro.url.searchParams;
 const slugValido = (valor: string | null) => (valor && SLUG.test(valor) ? valor : undefined);
@@ -36,7 +40,7 @@ try {
   datos = { resultado, categorias, especies };
   // La CDN guarda la página un minuto: menos consultas y la base de datos no tiene que despertar en cada visita.
   // El pedido siempre recalcula precio y stock, así que un minuto de diferencia no afecta lo que se cobra.
-  Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  cachearEnCdn(Astro);
 } catch (error) {
   registrarError('tienda', error);
   Astro.response.status = 503;
@@ -136,5 +140,5 @@ const enlaceCon = (cursor: string | null) => {
       </div>
     )}
   </div>
-  <AvisoCarrito />
+  <AvisoCarrito mensaje={agregar.mensaje} error={agregar.error} />
 </Pagina>

@@ -400,3 +400,13 @@ Los datos de pago (Nequi, Daviplata, cuenta o llave Bre-B) no van en la web: los
 | En consultas de una sola tabla, Drizzle no califica las columnas dentro de `sql`: la subconsulta de permisos del rol se correlacionaba mal y el editor mostraba los roles vacíos | Consultas reescritas con JOIN y GROUP BY |
 | Calcular el hash falso en la primera petición duplicaba el tiempo y delataba que el correo no existía | Hash falso constante (de una clave aleatoria descartada) |
 | `dorado-700` sobre `arena-100` daba 4,21:1, por debajo de AA | Token oscurecido a `#7A5C24` (5,2:1). Afectaba también a secciones de la portada y a la tienda |
+
+## 15. Carrito en cookie del servidor (decisión del usuario)
+
+Se reemplaza el carrito en `localStorage` por una cookie `HttpOnly`:
+
+- **`vitalis_carrito`**: `HttpOnly`, `Secure`, `SameSite=Lax`, 30 días. Formato `slug.cantidad|slug.cantidad`, validado al leerla (`src/lib/carrito.ts`). Solo guarda qué y cuánto; precio y stock salen siempre de la base.
+- **`vitalis_carrito_n`**: solo el número de unidades, legible por el navegador para el contador de la bolsa. La tienda se guarda 60 s en la CDN y no puede llevar datos de cada persona en el HTML.
+- **"Agregar", cambiar cantidad y enviar el pedido son formularios** (Actions con `accept: 'form'`): funcionan sin JavaScript (con redirección 303 para no reenviar) y con JavaScript "Agregar" no recarga.
+- **`/pedido` se renderiza en el servidor** con `Cache-Control: private, no-store`. Si el envío falla, vuelve a rellenar los campos y muestra cada error junto a su campo.
+- Se eliminan `src/scripts/cart.ts`, `src/scripts/pedido.ts` y la Action `carrito.resumen`.

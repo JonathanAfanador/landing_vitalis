@@ -113,7 +113,7 @@ Modelo de datos (normalizado; ajústalo si ves algo mejor y explícame por qué)
 - Seed con datos de ejemplo claramente marcados como ficticios (solo para desarrollo, nunca en producción).
 
 Flujos:
-- Carrito en el cliente (estado mínimo, persistido en localStorage) → checkout con datos de entrega → se guarda el pedido → se abre WhatsApp con el resumen y el código del pedido.
+- Carrito en una cookie HttpOnly del servidor (decisión posterior: sin localStorage; ver docs/fase-4.md) → checkout con datos de entrega → se guarda el pedido → se abre WhatsApp con el resumen y el código del pedido.
 - Medicamentos con requiere_formula = true: no se pueden pedir sin indicar que se tiene fórmula médica veterinaria; avisa que se pedirá por WhatsApp.
 - Formulario de cita: guarda la solicitud y ofrece abrir WhatsApp.
 - Protección anti-spam en formularios (honeypot + rate limit simple), mensajes de error junto al campo, estados de carga, éxito y error.

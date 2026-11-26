@@ -1,39 +1,68 @@
 ---
+// Aviso de "agregado al pedido". Sin JavaScript lo pinta el servidor tras la redirección (prop `mensaje`);
+// con JavaScript, el script envía el formulario sin recargar y lo muestra aquí mismo.
 import Icono from '../ui/Icono.astro';
+
+interface Props {
+  mensaje?: string | null;
+  error?: string | null;
+}
+
+const { mensaje = null, error = null } = Astro.props;
+const visible = Boolean(mensaje || error);
 ---
 
 <div
   class="pointer-events-none fixed inset-x-0 bottom-24 z-40 flex justify-center px-4 opacity-0 transition duration-300 ease-base data-[visible]:pointer-events-auto data-[visible]:opacity-100"
   data-aviso-carrito
+  data-visible={visible ? '' : undefined}
 >
   <div class="flex items-center gap-3 rounded-full bg-azul-900 py-2 pr-2 pl-4 text-crema-50 shadow-lg">
-    <Icono nombre="check-circle" class="size-5 text-dorado-400" />
-    <p class="body-6" role="status" aria-live="polite" data-aviso-texto></p>
-    <a href="/pedido" class="btn button-sm min-h-10 bg-dorado-400 px-4 text-azul-900 hover:bg-arena-100">
+    <Icono nombre="check-circle" class="size-5 shrink-0 text-dorado-400" />
+    <p class="body-6" role="status" aria-live="polite" data-aviso-texto>
+      {error ?? mensaje}
+    </p>
+    <a
+      href="/pedido"
+      class="btn button-sm min-h-10 shrink-0 bg-dorado-400 px-4 text-azul-900 hover:bg-arena-100"
+    >
       Ver pedido
     </a>
   </div>
 </div>
 
 <script>
-  import { agregar } from '../../scripts/cart';
+  import { actions } from 'astro:actions';
 
   const aviso = document.querySelector<HTMLElement>('[data-aviso-carrito]');
   const texto = document.querySelector<HTMLElement>('[data-aviso-texto]');
   let ocultar: number | undefined;
 
-  document.addEventListener('click', (event) => {
-    const boton = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-agregar]');
-    const slug = boton?.dataset.agregar;
-    if (!boton || !slug) return;
-    const campoCantidad = boton.dataset.cantidad ? document.getElementById(boton.dataset.cantidad) : null;
-    const cantidad =
-      campoCantidad instanceof HTMLInputElement ? Math.max(1, Number(campoCantidad.value) || 1) : 1;
-    agregar(slug, cantidad);
+  const mostrar = (mensaje: string) => {
     if (!aviso || !texto) return;
-    texto.textContent = `Agregaste ${boton.dataset.nombre ?? 'el medicamento'} a tu pedido.`;
+    texto.textContent = mensaje;
     aviso.dataset.visible = '';
     window.clearTimeout(ocultar);
     ocultar = window.setTimeout(() => delete aviso.dataset.visible, 4000);
+  };
+  if (aviso?.dataset.visible !== undefined)
+    ocultar = window.setTimeout(() => delete aviso.dataset.visible, 4000);
+
+  document.addEventListener('submit', async (event) => {
+    const form = event.target as HTMLFormElement;
+    if (!form.matches('[data-agregar]')) return;
+    event.preventDefault();
+    const boton = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    if (boton) boton.disabled = true;
+    const { data, error } = await actions.carrito.agregar(new FormData(form));
+    if (boton) boton.disabled = false;
+
+    if (error) return mostrar(error.message || 'No pudimos agregarlo. Inténtalo de nuevo.');
+    document.dispatchEvent(new CustomEvent('carrito:unidades', { detail: data.unidades }));
+    mostrar(
+      data.limitadoPorStock
+        ? `Tienes en tu pedido todas las unidades disponibles de ${data.nombre}.`
+        : `Agregaste ${data.nombre} a tu pedido.`,
+    );
   });
 </script>
