@@ -1,0 +1,63 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import Icono from '../../components/ui/Icono.astro';
+import { can } from '../../admin/autorizacion';
+import { GESTIONAR_ROLES, type Capacidad } from '../../admin/permisos';
+import type { NombreIcono } from '../../lib/iconos';
+
+export const prerender = false;
+
+const usuario = Astro.locals.usuario;
+const accesos: { titulo: string; texto: string; href: string; icono: NombreIcono; capacidad: Capacidad }[] = [
+  {
+    titulo: 'Usuarios',
+    texto: 'Cuentas del panel, roles asignados y contraseñas.',
+    href: '/admin/usuarios',
+    icono: 'person-simple-walk',
+    capacidad: 'usuarios:ver',
+  },
+  {
+    titulo: 'Roles y permisos',
+    texto: 'Qué puede hacer cada rol dentro del panel.',
+    href: '/admin/roles',
+    icono: 'shield-check',
+    capacidad: GESTIONAR_ROLES,
+  },
+  {
+    titulo: 'Auditoría',
+    texto: 'Registro de ingresos, cambios de roles y operaciones.',
+    href: '/admin/auditoria',
+    icono: 'path',
+    capacidad: 'auditoria:ver',
+  },
+];
+const visibles = accesos.filter((a) => can(usuario, a.capacidad));
+---
+
+<AdminLayout titulo="Resumen">
+  <h1 class="heading-3">Hola, {usuario?.nombre}</h1>
+  <p class="body-3 mt-2 text-tinta-600">Tu rol es {usuario?.rolNombre}.</p>
+
+  {visibles.length ? (
+    <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {visibles.map((a) => (
+        <li>
+          <a
+            href={a.href}
+            class="flex h-full flex-col gap-4 rounded-3xl bg-arena-100 p-6 transition duration-300 ease-base hover:bg-dorado-400/30"
+          >
+            <span class="grid size-12 place-items-center rounded-full bg-crema-50 text-dorado-700">
+              <Icono nombre={a.icono} />
+            </span>
+            <span class="title-1">{a.titulo}</span>
+            <span class="body-6 text-tinta-600">{a.texto}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
+      Tu rol todavía no tiene secciones disponibles. Pide a un superadmin que te asigne permisos.
+    </p>
+  )}
+</AdminLayout>

@@ -1,0 +1,63 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import Aviso from '../../components/admin/Aviso.astro';
+import Campo from '../../components/formularios/Campo.astro';
+import { CLAVE_MIN } from '../../lib/clave';
+
+export const prerender = false;
+
+const resultado = Astro.getActionResult(actions.admin.auth.cambiarClave);
+if (resultado && !resultado.error) return Astro.redirect('/admin');
+
+const usuario = Astro.locals.usuario;
+const error = resultado?.error;
+const mensaje = error && (isInputError(error) ? 'Revisa los campos.' : error.message);
+---
+
+<AdminLayout titulo="Cambiar contraseña">
+  <div class="mx-auto max-w-md">
+    <h1 class="heading-3">Cambia tu contraseña</h1>
+    {usuario?.debeCambiarClave && (
+      <p class="body-3 mt-3 text-tinta-600">
+        Antes de continuar, reemplaza la contraseña temporal por una tuya.
+      </p>
+    )}
+    {mensaje && (
+      <Aviso tipo="error" class="mt-6">
+        {mensaje}
+      </Aviso>
+    )}
+
+    <form method="POST" action={actions.admin.auth.cambiarClave} class="mt-8 flex flex-col gap-4">
+      <input type="text" name="usuario" value={usuario?.email} autocomplete="username" hidden />
+      <Campo
+        name="actual"
+        etiqueta="Contraseña actual"
+        type="password"
+        autocomplete="current-password"
+        required
+      />
+      <Campo
+        name="nueva"
+        etiqueta="Contraseña nueva"
+        type="password"
+        autocomplete="new-password"
+        required
+        minlength={CLAVE_MIN}
+        maxlength={128}
+        ayuda={`Mínimo ${CLAVE_MIN} caracteres. Una frase larga es más segura y fácil de recordar.`}
+      />
+      <Campo
+        name="confirmacion"
+        etiqueta="Repite la contraseña nueva"
+        type="password"
+        autocomplete="new-password"
+        required
+      />
+      <button type="submit" class="btn-principal mt-2 w-full">
+        Guardar contraseña
+      </button>
+    </form>
+  </div>
+</AdminLayout>

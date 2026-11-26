@@ -5,10 +5,12 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgSchema,
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 
 // Todo vive en el schema `vitalis`: separado de lo que cree el proveedor y con permisos propios.
@@ -149,5 +151,152 @@ export const pedidoItems = vitalis.table(
     check('pedido_items_cantidad', sql`${t.cantidad} between 1 and 99`),
     check('pedido_items_precio_positivo', sql`${t.precioUnitarioCop} > 0`),
     index('pedido_items_medicamento_id_idx').on(t.medicamentoId),
+  ],
+);
+
+// ─── Panel: usuarios, roles, permisos, sesiones y auditoría ───────────────────────────────────
+
+export const roles = vitalis.table(
+  'roles',
+  {
+    id: id(),
+    slug: text('slug').notNull().unique(),
+    nombre: text('nombre').notNull().unique(),
+    descripcion: text('descripcion'),
+    // Los roles de sistema (superadmin, admin, usuario) no se borran ni se renombran; un trigger lo garantiza.
+    esSistema: boolean('es_sistema').notNull().default(false),
+    createdAt: creado(),
+    updatedAt: actualizado(),
+  },
+  (t) => [
+    check('roles_slug_formato', sql`${t.slug} ~ ${SLUG}`),
+    check('roles_nombre_largo', sql`char_length(${t.nombre}) between 2 and 60`),
+    check('roles_descripcion_largo', sql`char_length(${t.descripcion}) <= 300`),
+  ],
+);
+
+// Copia del catálogo que vive en el código (src/admin/permisos.ts). Lo sincroniza un script.
+export const permisos = vitalis.table(
+  'permisos',
+  {
+    id: id(),
+    codigo: text('codigo').notNull().unique(),
+    modulo: text('modulo').notNull(),
+    nombre: text('nombre').notNull(),
+    descripcion: text('descripcion').notNull(),
+    datosPersonales: boolean('datos_personales').notNull().default(false),
+  },
+  (t) => [check('permisos_codigo_formato', sql`${t.codigo} ~ '^[a-z_]+:[a-z_]+$'`)],
+);
+
+export const rolPermiso = vitalis.table(
+  'rol_permiso',
+  {
+    rolId: bigint('rol_id', { mode: 'number' })
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
+    permisoId: bigint('permiso_id', { mode: 'number' })
+      .notNull()
+      .references(() => permisos.id, { onDelete: 'cascade' }),
+  },
+  (t) => [
+    primaryKey({ columns: [t.rolId, t.permisoId] }),
+    index('rol_permiso_permiso_id_idx').on(t.permisoId),
+  ],
+);
+
+export const usuarios = vitalis.table(
+  'usuarios',
+  {
+    id: id(),
+    nombre: text('nombre').notNull(),
+    email: text('email').notNull(),
+    claveHash: text('clave_hash').notNull(),
+    rolId: bigint('rol_id', { mode: 'number' })
+      .notNull()
+      .references(() => roles.id, { onDelete: 'restrict' }),
+    activo: boolean('activo').notNull().default(true),
+    debeCambiarClave: boolean('debe_cambiar_clave').notNull().default(true),
+    ultimoAcceso: timestamp('ultimo_acceso', { withTimezone: true }),
+    createdAt: creado(),
+    updatedAt: actualizado(),
+  },
+  (t) => [
+    uniqueIndex('usuarios_email_unique').on(sql`lower(${t.email})`),
+    index('usuarios_rol_id_idx').on(t.rolId),
+    check('usuarios_nombre_largo', sql`char_length(${t.nombre}) between 2 and 80`),
+    check(
+      'usuarios_email_formato',
+      sql`${t.email} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' and char_length(${t.email}) <= 120`,
+    ),
+    check('usuarios_clave_formato', sql`${t.claveHash} like 'scrypt$%'`),
+  ],
+);
+
+export const sesiones = vitalis.table(
+  'sesiones',
+  {
+    // Solo el SHA-256 del token: quien lea la tabla no puede usar las sesiones.
+    tokenHash: text('token_hash').primaryKey(),
+    usuarioId: bigint('usuario_id', { mode: 'number' })
+      .notNull()
+      .references(() => usuarios.id, { onDelete: 'cascade' }),
+    expiraEn: timestamp('expira_en', { withTimezone: true }).notNull(),
+    ultimoUso: timestamp('ultimo_uso', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: creado(),
+  },
+  (t) => [index('sesiones_usuario_id_idx').on(t.usuarioId), index('sesiones_expira_en_idx').on(t.expiraEn)],
+);
+
+export const EVENTOS_AUDITORIA = [
+  'login_ok',
+  'login_fallido',
+  'logout',
+  'clave_cambiada',
+  'clave_restablecida',
+  'usuario_creado',
+  'usuario_desactivado',
+  'usuario_reactivado',
+  'rol_asignado',
+  'rol_creado',
+  'rol_editado',
+  'rol_eliminado',
+  'permisos_rol_cambiados',
+  'medicamento_creado',
+  'medicamento_editado',
+  'medicamento_eliminado',
+  'stock_ajustado',
+  'categoria_creada',
+  'categoria_editada',
+  'categoria_eliminada',
+  'pedido_estado_cambiado',
+  'cita_estado_cambiado',
+] as const;
+export type EventoAuditoria = (typeof EVENTOS_AUDITORIA)[number];
+
+// Solo se inserta y se lee: el rol del panel no tiene UPDATE ni DELETE sobre esta tabla.
+export const auditoria = vitalis.table(
+  'auditoria',
+  {
+    id: id(),
+    createdAt: creado(),
+    actorId: bigint('actor_id', { mode: 'number' }).references(() => usuarios.id, { onDelete: 'restrict' }),
+    evento: text('evento').$type<EventoAuditoria>().notNull(),
+    entidad: text('entidad'),
+    entidadId: text('entidad_id'),
+    ipHash: text('ip_hash'),
+    // HMAC del correo en los intentos de login: sirve para el límite aunque la cuenta no exista.
+    sujetoHash: text('sujeto_hash'),
+    detalle: jsonb('detalle').$type<Record<string, unknown>>(),
+  },
+  (t) => [
+    check(
+      'auditoria_evento_valido',
+      sql.raw(`evento in (${EVENTOS_AUDITORIA.map((e) => `'${e}'`).join(', ')})`),
+    ),
+    index('auditoria_created_at_id_idx').on(t.createdAt.desc(), t.id.desc()),
+    index('auditoria_actor_id_idx').on(t.actorId),
+    index('auditoria_login_idx').on(t.evento, t.sujetoHash, t.createdAt),
+    index('auditoria_login_ip_idx').on(t.evento, t.ipHash, t.createdAt),
   ],
 );

@@ -1,0 +1,53 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import Aviso from '../../components/admin/Aviso.astro';
+import Campo from '../../components/formularios/Campo.astro';
+import isotipo from '../../assets/brand/isotipo.svg';
+
+export const prerender = false;
+
+const ingreso = Astro.getActionResult(actions.admin.auth.ingresar);
+const salida = Astro.getActionResult(actions.admin.auth.salir);
+
+if (ingreso && !ingreso.error) return Astro.redirect('/admin');
+if (!ingreso && !salida && Astro.locals.usuario) return Astro.redirect('/admin');
+
+const errorCampos = ingreso?.error && isInputError(ingreso.error) ? ingreso.error.fields : {};
+const errorGeneral = ingreso?.error && !isInputError(ingreso.error) ? ingreso.error.message : null;
+---
+
+<AdminLayout titulo="Ingresar">
+  <div class="mx-auto max-w-sm">
+    <img src={isotipo.src} alt="" width="120" height="92" class="mx-auto w-28" />
+    <h1 class="heading-3 mt-6 text-center">Panel de Vitalis</h1>
+
+    {salida && !salida.error && (
+      <Aviso tipo="exito" class="mt-6">
+        Cerraste sesión.
+      </Aviso>
+    )}
+    {errorGeneral && (
+      <Aviso tipo="error" class="mt-6">
+        {errorGeneral}
+      </Aviso>
+    )}
+
+    <form method="POST" action={actions.admin.auth.ingresar} class="mt-8 flex flex-col gap-4">
+      <Campo name="email" etiqueta="Correo" type="email" autocomplete="username" required maxlength={120} />
+      {errorCampos.email && <p class="body-6 -mt-3 text-error-700">{errorCampos.email[0]}</p>}
+      <Campo
+        name="clave"
+        etiqueta="Contraseña"
+        type="password"
+        autocomplete="current-password"
+        required
+        maxlength={128}
+      />
+      {errorCampos.clave && <p class="body-6 -mt-3 text-error-700">{errorCampos.clave[0]}</p>}
+      <button type="submit" class="btn-principal mt-2 w-full">
+        Ingresar
+      </button>
+    </form>
+  </div>
+</AdminLayout>

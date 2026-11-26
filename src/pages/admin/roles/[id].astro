@@ -1,0 +1,42 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Aviso from '../../../components/admin/Aviso.astro';
+import FormRol from '../../../components/admin/FormRol.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import { permisoDePagina } from '../../../admin/guard';
+import { GESTIONAR_ROLES } from '../../../admin/permisos';
+import { obtenerRol } from '../../../admin/roles';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, GESTIONAR_ROLES);
+const rolId = Number(Astro.params.id);
+const rol = actor && Number.isInteger(rolId) && rolId > 0 ? await obtenerRol(rolId) : null;
+if (actor && (!rol || rol.slug === 'superadmin')) return Astro.redirect('/admin/roles');
+
+const resultado = Astro.getActionResult(actions.admin.roles.editar);
+const error =
+  resultado?.error && (isInputError(resultado.error) ? 'Revisa el nombre del rol.' : resultado.error.message);
+const creado = Astro.url.searchParams.has('creado');
+---
+
+<AdminLayout titulo={rol ? `Rol ${rol.nombre}` : 'Rol'}>
+  {!actor || !rol ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">{rol.nombre}</h1>
+      <div class="mt-6 flex flex-col gap-3">
+        {error && <Aviso tipo="error">{error}</Aviso>}
+        {resultado?.data && (
+          <Aviso tipo="exito">Rol guardado. Los cambios rigen desde la próxima página de cada usuario.</Aviso>
+        )}
+        {creado && !resultado && <Aviso tipo="exito">Rol creado. Revisa sus permisos.</Aviso>}
+      </div>
+      <div class="mt-8">
+        <FormRol action={actions.admin.roles.editar} rol={rol} />
+      </div>
+    </>
+  )}
+</AdminLayout>

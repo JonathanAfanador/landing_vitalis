@@ -1,0 +1,35 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Aviso from '../../../components/admin/Aviso.astro';
+import FormRol from '../../../components/admin/FormRol.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import { permisoDePagina } from '../../../admin/guard';
+import { GESTIONAR_ROLES } from '../../../admin/permisos';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, GESTIONAR_ROLES);
+const resultado = Astro.getActionResult(actions.admin.roles.crear);
+if (resultado?.data) return Astro.redirect(`/admin/roles/${resultado.data.id}?creado=1`);
+const error =
+  resultado?.error && (isInputError(resultado.error) ? 'Revisa el nombre del rol.' : resultado.error.message);
+---
+
+<AdminLayout titulo="Nuevo rol">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Nuevo rol</h1>
+      {error && (
+        <Aviso tipo="error" class="mt-6">
+          {error}
+        </Aviso>
+      )}
+      <div class="mt-8">
+        <FormRol action={actions.admin.roles.crear} />
+      </div>
+    </>
+  )}
+</AdminLayout>

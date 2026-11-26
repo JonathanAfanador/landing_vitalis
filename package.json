@@ -15,9 +15,10 @@
     "format": "prettier --write .",
     "astro": "astro",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:seed:demo": "tsx --env-file=.env scripts/seed-demo.ts",
-    "test": "vitest run"
+    "db:migrate": "drizzle-kit migrate && tsx --env-file-if-exists=.env scripts/sincronizar-permisos.ts",
+    "db:seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts",
+    "test": "vitest run",
+    "db:crear-superadmin": "tsx --env-file-if-exists=.env scripts/crear-superadmin.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.6",

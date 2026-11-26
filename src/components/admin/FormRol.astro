@@ -1,0 +1,158 @@
+---
+// Editor de rol: datos básicos y matriz de permisos agrupada por módulo.
+import Campo from '../formularios/Campo.astro';
+import { MODULOS, PERMISOS, type CodigoPermiso } from '../../admin/permisos';
+
+interface Props {
+  action: string;
+  rol?: { id: number; nombre: string; descripcion: string | null; esSistema: boolean; permisos: string[] };
+}
+
+const { action, rol } = Astro.props;
+const marcados = new Set(rol?.permisos ?? []);
+const grupos = Object.entries(MODULOS).map(([modulo, nombre]) => ({
+  modulo,
+  nombre,
+  permisos: (Object.entries(PERMISOS) as [CodigoPermiso, (typeof PERMISOS)[CodigoPermiso]][]).filter(
+    ([, def]) => def.modulo === modulo,
+  ),
+}));
+const requiere = (def: object) => ('requiere' in def ? (def.requiere as readonly string[]).join(' ') : '');
+---
+
+<form method="POST" action={action} class="flex flex-col gap-8" data-form-rol>
+  {rol && <input type="hidden" name="rolId" value={rol.id} />}
+  <div class="grid gap-4 md:grid-cols-2">
+    {rol?.esSistema ? (
+      <div>
+        <p class="mb-2 text-sm font-medium">Nombre</p>
+        <p class="title-2">{rol.nombre}</p>
+        <p class="caption-5 text-tinta-600">Los roles de sistema no se renombran.</p>
+        <input type="hidden" name="nombre" value={rol.nombre} />
+      </div>
+    ) : (
+      <Campo name="nombre" etiqueta="Nombre" required minlength={2} maxlength={60} value={rol?.nombre} />
+    )}
+    <Campo name="descripcion" etiqueta="Descripción" maxlength={300} value={rol?.descripcion ?? ''} />
+  </div>
+
+  <fieldset>
+    <legend class="heading-5">Permisos</legend>
+    <p class="body-6 mt-1 text-tinta-600">
+      Al marcar un permiso se marcan también los que necesita. Los señalados con
+      <span class="caption-3 rounded-full bg-azul-900 px-2 py-0.5 text-crema-50">Datos personales</span>
+      muestran información de clientes o usuarios (Ley 1581): dalos con criterio.
+    </p>
+    <label for="buscar-permiso" class="mt-4 mb-2 block text-sm font-medium">
+      Buscar permiso
+    </label>
+    <input
+      id="buscar-permiso"
+      type="search"
+      class="min-h-11 w-full max-w-sm rounded-full border border-azul-900/20 bg-crema-50 px-4"
+      placeholder="Por ejemplo: auditoría"
+      data-buscar
+    />
+
+    <div class="mt-6 grid gap-4 md:grid-cols-2">
+      {grupos.map((g) => (
+        <section class="rounded-3xl border border-azul-900/10 p-4" data-modulo>
+          <div class="flex items-center justify-between gap-3 border-b border-azul-900/10 pb-3">
+            <h3 class="title-2">{g.nombre}</h3>
+            <label class="body-6 flex items-center gap-2">
+              <input type="checkbox" class="size-5 accent-azul-900" data-todo-modulo />
+              Todo el módulo
+            </label>
+          </div>
+          <ul class="mt-2 flex flex-col">
+            {g.permisos.map(([codigo, def]) => (
+              <li data-permiso-item data-texto={`${def.nombre} ${def.descripcion} ${codigo}`.toLowerCase()}>
+                <label class="flex gap-3 py-2">
+                  <input
+                    type="checkbox"
+                    name="permisos"
+                    value={codigo}
+                    checked={marcados.has(codigo)}
+                    class="mt-0.5 size-5 shrink-0 accent-azul-900"
+                    data-requiere={requiere(def)}
+                  />
+                  <span>
+                    <span class="title-3 flex flex-wrap items-center gap-2">
+                      {def.nombre}
+                      {'datosPersonales' in def && def.datosPersonales && (
+                        <span class="caption-3 rounded-full bg-azul-900 px-2 py-0.5 text-crema-50">
+                          Datos personales
+                        </span>
+                      )}
+                    </span>
+                    <span class="body-6 block text-tinta-600">{def.descripcion}</span>
+                    <code class="caption-5 text-tinta-600">{codigo}</code>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  </fieldset>
+
+  <div class="flex flex-wrap gap-3">
+    <button type="submit" class="btn-principal">
+      Guardar rol
+    </button>
+    <a href="/admin/roles" class="btn-borde">
+      Volver
+    </a>
+  </div>
+</form>
+
+<script>
+  // Comodidades del editor: dependencias, "todo el módulo" y buscador. El servidor vuelve a normalizar todo.
+  const form = document.querySelector<HTMLFormElement>('[data-form-rol]');
+  if (form) {
+    const casillas = [...form.querySelectorAll<HTMLInputElement>('input[name="permisos"]')];
+    const porCodigo = new Map(casillas.map((c) => [c.value, c]));
+
+    const marcarDependencias = (casilla: HTMLInputElement) => {
+      for (const codigo of (casilla.dataset.requiere ?? '').split(' ').filter(Boolean)) {
+        const dependencia = porCodigo.get(codigo);
+        if (dependencia && !dependencia.checked) {
+          dependencia.checked = true;
+          marcarDependencias(dependencia);
+        }
+      }
+    };
+    const sincronizarModulos = () => {
+      form.querySelectorAll<HTMLElement>('[data-modulo]').forEach((modulo) => {
+        const todas = [...modulo.querySelectorAll<HTMLInputElement>('input[name="permisos"]')];
+        const todo = modulo.querySelector<HTMLInputElement>('[data-todo-modulo]');
+        if (!todo) return;
+        const marcadas = todas.filter((c) => c.checked).length;
+        todo.checked = marcadas === todas.length;
+        todo.indeterminate = marcadas > 0 && marcadas < todas.length;
+      });
+    };
+
+    form.addEventListener('change', (event) => {
+      const objetivo = event.target as HTMLInputElement;
+      if (objetivo.matches('[data-todo-modulo]')) {
+        objetivo
+          .closest('[data-modulo]')
+          ?.querySelectorAll<HTMLInputElement>('input[name="permisos"]')
+          .forEach((c) => (c.checked = objetivo.checked));
+      }
+      casillas.filter((c) => c.checked).forEach(marcarDependencias);
+      sincronizarModulos();
+    });
+
+    form.querySelector<HTMLInputElement>('[data-buscar]')?.addEventListener('input', (event) => {
+      const texto = (event.target as HTMLInputElement).value.trim().toLowerCase();
+      form.querySelectorAll<HTMLElement>('[data-permiso-item]').forEach((item) => {
+        item.hidden = Boolean(texto) && !item.dataset.texto?.includes(texto);
+      });
+    });
+
+    sincronizarModulos();
+  }
+</script>

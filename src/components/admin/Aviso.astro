@@ -1,0 +1,25 @@
+---
+// Mensaje tras una acción del panel: éxito o error, anunciado a lectores de pantalla.
+import Icono from '../ui/Icono.astro';
+
+interface Props {
+  tipo: 'exito' | 'error';
+  class?: string;
+}
+
+const { tipo, class: className = '' } = Astro.props;
+---
+
+<div
+  role={tipo === 'error' ? 'alert' : 'status'}
+  class:list={[
+    'body-6 flex gap-3 rounded-2xl p-4',
+    tipo === 'error' ? 'bg-error-700/10 text-error-700' : 'bg-dorado-400/20 text-azul-900',
+    className,
+  ]}
+>
+  <Icono nombre={tipo === 'error' ? 'warning-circle' : 'check-circle'} class="size-5 shrink-0" />
+  <div>
+    <slot />
+  </div>
+</div>

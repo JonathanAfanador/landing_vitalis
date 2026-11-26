@@ -1,0 +1,101 @@
+---
+import { actions, isInputError, type ActionError } from 'astro:actions';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Aviso from '../../../components/admin/Aviso.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import { permisoDePagina } from '../../../admin/guard';
+import { GESTIONAR_ROLES } from '../../../admin/permisos';
+import { listarRoles } from '../../../admin/roles';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, GESTIONAR_ROLES);
+const duplicado = Astro.getActionResult(actions.admin.roles.duplicar);
+if (duplicado?.data) return Astro.redirect(`/admin/roles/${duplicado.data.id}?creado=1`);
+const eliminado = Astro.getActionResult(actions.admin.roles.eliminar);
+
+const errores = [duplicado?.error, eliminado?.error]
+  .filter((e): e is ActionError => Boolean(e))
+  .map((e) => (isInputError(e) ? 'Revisa los datos.' : e.message));
+const roles = actor ? await listarRoles() : [];
+---
+
+<AdminLayout titulo="Roles">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 class="heading-3">Roles y permisos</h1>
+          <p class="body-6 mt-2 max-w-xl text-tinta-600">
+            Solo el superadmin gestiona roles. Superadmin tiene todos los permisos y no se puede modificar.
+          </p>
+        </div>
+        <a href="/admin/roles/nuevo" class="btn-principal">
+          Nuevo rol
+        </a>
+      </div>
+
+      <div class="mt-6 flex flex-col gap-3">
+        {errores.map((e) => (
+          <Aviso tipo="error">{e}</Aviso>
+        ))}
+        {eliminado?.data && <Aviso tipo="exito">Rol eliminado.</Aviso>}
+      </div>
+
+      <ul class="mt-8 grid gap-4 md:grid-cols-2">
+        {roles.map((r) => (
+          <li class="flex flex-col rounded-3xl border border-azul-900/10 p-6">
+            <div class="flex items-start justify-between gap-4">
+              <h2 class="title-1">{r.nombre}</h2>
+              {r.esSistema && (
+                <span class="caption-3 rounded-full bg-arena-100 px-2 py-1 text-dorado-700">Sistema</span>
+              )}
+            </div>
+            {r.descripcion && <p class="body-6 mt-2 text-tinta-600">{r.descripcion}</p>}
+            <p class="body-6 mt-4">
+              {r.slug === 'superadmin'
+                ? 'Todos los permisos'
+                : `${r.permisos.length} ${r.permisos.length === 1 ? 'permiso' : 'permisos'}`}
+              {' · '}
+              {r.usuarios} {r.usuarios === 1 ? 'usuario' : 'usuarios'}
+            </p>
+            {r.slug !== 'superadmin' && (
+              <div class="mt-6 flex flex-wrap gap-2">
+                <a href={`/admin/roles/${r.id}`} class="btn-borde min-h-10 px-4 text-sm">
+                  Editar
+                </a>
+                <form method="POST" action={actions.admin.roles.duplicar}>
+                  <input type="hidden" name="rolId" value={r.id} />
+                  <button type="submit" class="btn-borde min-h-10 px-4 text-sm">
+                    Duplicar
+                  </button>
+                </form>
+                {!r.esSistema && (
+                  <form
+                    method="POST"
+                    action={actions.admin.roles.eliminar}
+                    data-confirmar={`¿Eliminar el rol ${r.nombre}? No se puede deshacer.`}
+                  >
+                    <input type="hidden" name="rolId" value={r.id} />
+                    <button
+                      type="submit"
+                      class="btn min-h-10 border border-error-700/40 px-4 text-sm text-error-700 hover:bg-error-700/10"
+                      disabled={r.usuarios > 0}
+                      title={
+                        r.usuarios > 0 ? 'Asigna otro rol a sus usuarios antes de eliminarlo' : undefined
+                      }
+                    >
+                      Eliminar
+                    </button>
+                  </form>
+                )}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </>
+  )}
+</AdminLayout>

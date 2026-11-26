@@ -15,6 +15,20 @@
       "when": 1795708365723,
       "tag": "0001_rol_app_y_datos_base",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795717469736,
+      "tag": "0002_panel_usuarios_roles_auditoria",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795717554282,
+      "tag": "0003_rol_admin_triggers_y_roles_base",
+      "breakpoints": true
     }
   ]
 }

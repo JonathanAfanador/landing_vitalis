@@ -1,0 +1,221 @@
+---
+import { actions, isInputError, type ActionError } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import Aviso from '../../components/admin/Aviso.astro';
+import SinPermiso from '../../components/admin/SinPermiso.astro';
+import Campo from '../../components/formularios/Campo.astro';
+import { can, puedeAsignarRol, puedeGestionarUsuario } from '../../admin/autorizacion';
+import { permisoDePagina } from '../../admin/guard';
+import { listarRoles } from '../../admin/roles';
+import { listarUsuariosPanel } from '../../admin/usuarios';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'usuarios:ver');
+
+const resultados = {
+  crear: Astro.getActionResult(actions.admin.usuarios.crear),
+  rol: Astro.getActionResult(actions.admin.usuarios.cambiarRol),
+  estado: Astro.getActionResult(actions.admin.usuarios.cambiarEstado),
+  clave: Astro.getActionResult(actions.admin.usuarios.restablecerClave),
+};
+const errores = Object.values(resultados)
+  .map((r) => r?.error)
+  .filter((e): e is ActionError => Boolean(e))
+  .map((e) => (isInputError(e) ? 'Revisa los datos del formulario.' : e.message));
+const claveTemporal = resultados.crear?.data ?? resultados.clave?.data;
+
+const [usuarios, roles] = actor ? await Promise.all([listarUsuariosPanel(), listarRoles()]) : [[], []];
+// Solo se ofrecen los roles que este usuario puede asignar (la Action vuelve a comprobarlo).
+const asignables = actor ? roles.filter((r) => puedeAsignarRol(actor, r).ok) : [];
+const puedeCrear = actor && can(actor, 'usuarios:gestionar') && asignables.length > 0;
+const fecha = new Intl.DateTimeFormat('es-CO', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'America/Bogota',
+});
+---
+
+<AdminLayout titulo="Usuarios">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Usuarios del panel</h1>
+
+      <div class="mt-6 flex flex-col gap-3">
+        {errores.map((e) => (
+          <Aviso tipo="error">{e}</Aviso>
+        ))}
+        {resultados.rol?.data && (
+          <Aviso tipo="exito">Rol actualizado. El cambio ya rige en su próxima página.</Aviso>
+        )}
+        {resultados.estado?.data && <Aviso tipo="exito">Estado del usuario actualizado.</Aviso>}
+        {claveTemporal && (
+          <Aviso tipo="exito">
+            Contraseña temporal de <strong>{claveTemporal.email}</strong>:
+            <code class="mx-1 rounded-md bg-crema-50 px-2 py-0.5 font-mono text-base select-all">
+              {claveTemporal.claveTemporal}
+            </code>
+            Entrégala por un canal privado. Solo se muestra esta vez y deberá cambiarla al ingresar.
+          </Aviso>
+        )}
+      </div>
+
+      <div class="mt-8 rounded-3xl border border-azul-900/10 md:overflow-x-auto">
+        <table class="block w-full text-left md:table md:min-w-3xl">
+          <thead class="caption-3 hidden bg-arena-100 text-dorado-700 md:table-header-group">
+            <tr>
+              <th scope="col" class="px-4 py-3">
+                Usuario
+              </th>
+              <th scope="col" class="px-4 py-3">
+                Rol
+              </th>
+              <th scope="col" class="px-4 py-3">
+                Último ingreso
+              </th>
+              <th scope="col" class="px-4 py-3">
+                <span class="sr-only">Acciones</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody class="block divide-y divide-azul-900/10 md:table-row-group">
+            {usuarios.map((u) => {
+              const objetivo = {
+                id: u.id,
+                rol: roles.find((r) => r.id === u.rolId) ?? { id: u.rolId, slug: u.rolSlug, permisos: [] },
+              };
+              const opcionesRol = asignables.filter((r) => puedeAsignarRol(actor, r, objetivo).ok);
+              const gestionable = puedeGestionarUsuario(actor, objetivo, 'desactivar').ok;
+              return (
+                <tr class:list={['block py-2 align-top md:table-row md:py-0', !u.activo && 'text-tinta-600']}>
+                  <td class="block px-4 py-2 md:table-cell md:py-4">
+                    <p class="title-3">{u.nombre}</p>
+                    <p class="body-6 text-tinta-600">{u.email}</p>
+                    {!u.activo && <p class="caption-3 mt-1 text-error-700">Desactivado</p>}
+                    {u.activo && u.debeCambiarClave && (
+                      <p class="caption-5 mt-1 text-dorado-700">Debe cambiar la contraseña</p>
+                    )}
+                  </td>
+                  <td class="block px-4 py-2 md:table-cell md:py-4">
+                    {opcionesRol.length && u.activo ? (
+                      <form
+                        method="POST"
+                        action={actions.admin.usuarios.cambiarRol}
+                        class="flex gap-2"
+                        data-confirmar={`¿Cambiar el rol de ${u.nombre}?`}
+                      >
+                        <input type="hidden" name="usuarioId" value={u.id} />
+                        <label class="sr-only" for={`rol-${u.id}`}>
+                          Rol de {u.nombre}
+                        </label>
+                        <select
+                          id={`rol-${u.id}`}
+                          name="rolId"
+                          class="min-h-10 rounded-full border border-azul-900/20 bg-crema-50 px-3 text-sm"
+                        >
+                          {opcionesRol.some((r) => r.id === u.rolId) ? null : (
+                            <option value={u.rolId} selected disabled>
+                              {u.rolNombre}
+                            </option>
+                          )}
+                          {opcionesRol.map((r) => (
+                            <option value={r.id} selected={r.id === u.rolId}>
+                              {r.nombre}
+                            </option>
+                          ))}
+                        </select>
+                        <button type="submit" class="btn-borde min-h-10 px-3 text-sm">
+                          Cambiar
+                        </button>
+                      </form>
+                    ) : (
+                      <p class="body-6">{u.rolNombre}</p>
+                    )}
+                  </td>
+                  <td class="body-6 block px-4 py-2 md:table-cell md:py-4 text-tinta-600">
+                    <span class="md:hidden">Último ingreso: </span>
+                    {u.ultimoAcceso ? fecha.format(u.ultimoAcceso) : 'Nunca'}
+                  </td>
+                  <td class="block px-4 py-2 md:table-cell md:py-4">
+                    {gestionable && (
+                      <div class="flex flex-wrap gap-2 md:justify-end">
+                        <form
+                          method="POST"
+                          action={actions.admin.usuarios.restablecerClave}
+                          data-confirmar={`¿Restablecer la contraseña de ${u.nombre}? Se cerrarán sus sesiones.`}
+                        >
+                          <input type="hidden" name="usuarioId" value={u.id} />
+                          <button type="submit" class="btn-borde min-h-10 px-3 text-sm">
+                            Restablecer contraseña
+                          </button>
+                        </form>
+                        <form
+                          method="POST"
+                          action={actions.admin.usuarios.cambiarEstado}
+                          data-confirmar={
+                            u.activo
+                              ? `¿Desactivar a ${u.nombre}? No podrá ingresar y se cerrarán sus sesiones.`
+                              : undefined
+                          }
+                        >
+                          <input type="hidden" name="usuarioId" value={u.id} />
+                          <input type="hidden" name="activo" value={u.activo ? 'no' : 'si'} />
+                          <button
+                            type="submit"
+                            class:list={[
+                              'btn min-h-10 px-3 text-sm',
+                              u.activo
+                                ? 'border border-error-700/40 text-error-700 hover:bg-error-700/10'
+                                : 'btn-borde',
+                            ]}
+                          >
+                            {u.activo ? 'Desactivar' : 'Reactivar'}
+                          </button>
+                        </form>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {puedeCrear && (
+        <section class="mt-10 max-w-xl rounded-3xl bg-arena-100 p-6" aria-labelledby="titulo-nuevo">
+          <h2 id="titulo-nuevo" class="heading-5">
+            Nuevo usuario
+          </h2>
+          <p class="body-6 mt-1 text-tinta-600">
+            Se genera una contraseña temporal que deberá cambiar al ingresar.
+          </p>
+          <form method="POST" action={actions.admin.usuarios.crear} class="mt-6 flex flex-col gap-4">
+            <Campo name="nombre" etiqueta="Nombre" required minlength={2} maxlength={80} />
+            <Campo name="email" etiqueta="Correo" type="email" required maxlength={120} />
+            <div>
+              <label for="nuevo-rol" class="mb-2 block text-sm font-medium">
+                Rol
+              </label>
+              <select
+                id="nuevo-rol"
+                name="rolId"
+                required
+                class="min-h-11 w-full rounded-2xl border border-azul-900/20 bg-crema-50 px-4"
+              >
+                {asignables.map((r) => (
+                  <option value={r.id}>{r.nombre}</option>
+                ))}
+              </select>
+            </div>
+            <button type="submit" class="btn-principal">
+              Crear usuario
+            </button>
+          </form>
+        </section>
+      )}
+    </>
+  )}
+</AdminLayout>

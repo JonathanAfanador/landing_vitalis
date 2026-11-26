@@ -1,0 +1,149 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import SinPermiso from '../../components/admin/SinPermiso.astro';
+import { listarAuditoria } from '../../admin/auditoria';
+import { permisoDePagina } from '../../admin/guard';
+import { EVENTOS_AUDITORIA, type EventoAuditoria } from '../../db/schema';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'auditoria:ver');
+
+const NOMBRES: Record<EventoAuditoria, string> = {
+  login_ok: 'Ingreso',
+  login_fallido: 'Ingreso fallido',
+  logout: 'Cierre de sesión',
+  clave_cambiada: 'Contraseña cambiada',
+  clave_restablecida: 'Contraseña restablecida',
+  usuario_creado: 'Usuario creado',
+  usuario_desactivado: 'Usuario desactivado',
+  usuario_reactivado: 'Usuario reactivado',
+  rol_asignado: 'Rol asignado',
+  rol_creado: 'Rol creado',
+  rol_editado: 'Rol editado',
+  rol_eliminado: 'Rol eliminado',
+  permisos_rol_cambiados: 'Permisos de rol cambiados',
+  medicamento_creado: 'Medicamento creado',
+  medicamento_editado: 'Medicamento editado',
+  medicamento_eliminado: 'Medicamento eliminado',
+  stock_ajustado: 'Stock ajustado',
+  categoria_creada: 'Categoría creada',
+  categoria_editada: 'Categoría editada',
+  categoria_eliminada: 'Categoría eliminada',
+  pedido_estado_cambiado: 'Estado de pedido cambiado',
+  cita_estado_cambiado: 'Estado de cita cambiado',
+};
+
+const eventoParam = Astro.url.searchParams.get('evento');
+const evento = EVENTOS_AUDITORIA.find((e) => e === eventoParam);
+const { registros, siguienteCursor } = actor
+  ? await listarAuditoria({ evento, cursor: Astro.url.searchParams.get('cursor') })
+  : { registros: [], siguienteCursor: null };
+
+const siguiente = new URL(Astro.url);
+if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const fecha = new Intl.DateTimeFormat('es-CO', {
+  dateStyle: 'medium',
+  timeStyle: 'medium',
+  timeZone: 'America/Bogota',
+});
+const resumir = (detalle: Record<string, unknown> | null) =>
+  detalle
+    ? Object.entries(detalle)
+        .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') || 'ninguno' : String(v)}`)
+        .join(' · ')
+    : '';
+---
+
+<AdminLayout titulo="Auditoría">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Auditoría</h1>
+      <p class="body-6 mt-2 max-w-xl text-tinta-600">
+        Registro de solo lectura. Nadie puede editarlo ni borrarlo desde la web. No guarda datos personales de
+        clientes.
+      </p>
+
+      <form method="get" class="mt-6 flex flex-wrap items-end gap-3">
+        <div>
+          <label for="evento" class="mb-2 block text-sm font-medium">
+            Evento
+          </label>
+          <select
+            id="evento"
+            name="evento"
+            class="min-h-11 rounded-full border border-azul-900/20 bg-crema-50 px-4"
+          >
+            <option value="">Todos</option>
+            {EVENTOS_AUDITORIA.map((e) => (
+              <option value={e} selected={e === evento}>
+                {NOMBRES[e]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="submit" class="btn-principal">
+          Filtrar
+        </button>
+      </form>
+
+      {registros.length ? (
+        <div class="mt-8 rounded-3xl border border-azul-900/10 md:overflow-x-auto">
+          <table class="block w-full text-left md:table md:min-w-3xl">
+            <thead class="caption-3 hidden bg-arena-100 text-dorado-700 md:table-header-group">
+              <tr>
+                <th scope="col" class="px-4 py-3">
+                  Fecha
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Evento
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Quién
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Sobre
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Detalle
+                </th>
+              </tr>
+            </thead>
+            <tbody class="body-6 block divide-y divide-azul-900/10 md:table-row-group">
+              {registros.map((r) => (
+                <tr class="block py-2 align-top md:table-row md:py-0">
+                  <td class="block px-4 py-1 md:table-cell md:py-3 whitespace-nowrap text-tinta-600">
+                    {fecha.format(r.fecha)}
+                  </td>
+                  <td
+                    class:list={[
+                      'block px-4 py-1 font-medium md:table-cell md:py-3',
+                      r.evento === 'login_fallido' && 'text-error-700',
+                    ]}
+                  >
+                    {NOMBRES[r.evento]}
+                  </td>
+                  <td class="block px-4 py-1 md:table-cell md:py-3">{r.actor ?? 'Sin sesión'}</td>
+                  <td class="block px-4 py-1 md:table-cell md:py-3 text-tinta-600">
+                    {r.entidad ? `${r.entidad} #${r.entidadId}` : ''}
+                  </td>
+                  <td class="block px-4 py-1 md:table-cell md:py-3 text-tinta-600">{resumir(r.detalle)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">No hay registros con ese filtro.</p>
+      )}
+
+      {siguienteCursor && (
+        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
+          Registros anteriores
+        </a>
+      )}
+    </>
+  )}
+</AdminLayout>

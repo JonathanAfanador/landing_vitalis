@@ -1,5 +1,9 @@
 import { ActionError, defineAction } from 'astro:actions';
+import { auth } from './admin/auth';
+import { rolesAdmin } from './admin/roles';
+import { usuariosAdmin } from './admin/usuarios';
 import { z } from 'astro/zod';
+import { protegerErrores } from '../lib/acciones';
 import { medicamentosParaPedido } from '../db/queries/medicamentos';
 import { crearPedido, PedidoRechazado, pedidosRecientes } from '../db/queries/pedidos';
 import { hashIp } from '../lib/ip';
@@ -9,21 +13,24 @@ import { carritoSchema, pedidoSchema } from '../lib/validacion';
 const MAX_PEDIDOS_POR_IP = 5;
 
 export const server = {
+  // Panel: cada Action exige sesión y permiso en el servidor (src/admin/guard.ts).
+  admin: { auth, usuarios: usuariosAdmin, roles: rolesAdmin },
+
   carrito: {
     // Precios y stock al día para lo que hay en el carrito del navegador.
     resumen: defineAction({
       input: z.object({ items: carritoSchema }),
-      handler: async ({ items }) => {
+      handler: protegerErrores(async ({ items }) => {
         const filas = await medicamentosParaPedido(items.map((i) => i.slug));
         return calcularPedido(items, filas);
-      },
+      }),
     }),
   },
 
   pedidos: {
     crear: defineAction({
       input: pedidoSchema,
-      handler: async (datos, context) => {
+      handler: protegerErrores(async (datos, context) => {
         if (datos.sitioWeb)
           throw new ActionError({ code: 'BAD_REQUEST', message: 'No se pudo enviar el pedido.' });
 
@@ -47,7 +54,7 @@ export const server = {
                 : 'Algunos medicamentos ya no están disponibles en la cantidad que pediste. Revisa tu pedido.',
           });
         }
-      },
+      }),
     }),
   },
 };

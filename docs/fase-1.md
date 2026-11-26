@@ -72,7 +72,7 @@ Los textos de los diplomas y del afiche no se usan como contenido.
 | `azul-900` | `#071834` | Azul marino del logo. Texto principal, botón principal, footer y CTA final |
 | `azul-700` | `#1B3360` | Hover del botón principal y superficies oscuras secundarias |
 | `dorado-400` | `#CCA76C` | Dorado del logo. Solo acento: círculo, líneas, iconos, el punto del logo, fondo de botón secundario |
-| `dorado-700` | `#8A6A2E` | Dorado oscuro para texto pequeño dorado (etiquetas, "eyebrows") sobre fondos claros |
+| `dorado-700` | `#7A5C24` | Dorado oscuro para texto pequeño dorado (etiquetas, "eyebrows") sobre fondos claros. Era `#8A6A2E`; se oscureció en la Fase 4 porque sobre `arena-100` daba 4,21:1 |
 | `crema-50` | `#FBF7F0` | Fondo base. Blanco cálido, como las paredes con LED cálido |
 | `arena-100` | `#F3EADB` | Fondo de secciones alternas y tarjetas |
 | `blanco` | `#FFFFFF` | Tarjetas de producto y formularios |
@@ -88,8 +88,9 @@ Los textos de los diplomas y del afiche no se usan como contenido.
 | `azul-900` | `arena-100` | 14,80 | AAA |
 | `tinta-600` | `crema-50` | 7,04 | AAA |
 | `tinta-600` | `arena-100` | 6,30 | AA |
-| `dorado-700` | `crema-50` | 4,70 | AA |
-| `dorado-700` | `blanco` | 5,02 | AA |
+| `dorado-700` | `crema-50` | 5,81 | AA |
+| `dorado-700` | `arena-100` | 5,20 | AA |
+| `dorado-700` | `blanco` | 6,21 | AA |
 | `azul-900` | `dorado-400` | 7,83 | AAA (botón secundario dorado) |
 | `crema-50` | `azul-900` | 16,53 | AAA (footer, CTA final) |
 | `dorado-400` | `azul-900` | 7,83 | AAA (acentos sobre azul) |

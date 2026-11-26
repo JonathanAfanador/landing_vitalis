@@ -14,6 +14,7 @@ export default defineConfig({
   env: {
     schema: {
       DATABASE_URL: envField.string({ context: 'server', access: 'secret' }),
+      DATABASE_URL_ADMIN: envField.string({ context: 'server', access: 'secret' }),
       IP_HASH_SALT: envField.string({ context: 'server', access: 'secret', min: 16 }),
     },
   },

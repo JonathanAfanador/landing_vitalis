@@ -12,6 +12,7 @@ Entregas: **4A** autenticación + RBAC + auditoría · **4B** medicamentos, cate
 | Exportar CSV | **Pospuesto.** Queda en `docs/pendientes.md` y se recuerda al cerrar cada entrega |
 | Envíos | **No hay domicilios: solo venta y recogida en la clínica.** Se quita `enviado` y se dejan de pedir dirección y municipio. Ver la sección 13 |
 | Aviso por WhatsApp al confirmar | **No se hace ahora.** Queda en pendientes |
+| Pago | **Transferencia antes de recoger** (Nequi, Daviplata, cuenta o llave Bre-B). La clínica envía los datos de pago por WhatsApp al confirmar y marca el pedido como pagado en el panel. Nada de "pagas al recoger" |
 
 ---
 
@@ -35,7 +36,7 @@ Detalle:
 - **Expiración:** absoluta de 12 h e inactividad de 2 h. La fecha de último uso se actualiza como mucho cada 15 min, para no escribir en cada petición.
 - **Invalidación:**
   - Cerrar sesión borra la sesión.
-  - Cambiar contraseña, desactivar el usuario o cambiarle el rol borra todas sus sesiones.
+  - Cambiar contraseña o desactivar el usuario borra todas sus sesiones. Cambiarle el rol no hace falta: los permisos se leen en cada petición, así que el cambio surte efecto en la siguiente página sin obligarle a ingresar de nuevo.
   - Los **permisos se leen de la base en cada petición** (una consulta con JOIN). Por eso un cambio en los permisos de un rol surte efecto en la siguiente petición sin cerrar sesión.
 - **Primer ingreso:** la columna `debe_cambiar_clave` obliga a pasar por `/admin/cambiar-clave` antes de usar el panel.
 
@@ -74,9 +75,9 @@ Detalle:
 | pedidos | `SELECT`, `UPDATE (estado, updated_at)` |
 | pedido_items | `SELECT` |
 | solicitudes_cita | `SELECT`, `UPDATE (estado, notas_internas, updated_at)` |
-| usuarios | `SELECT, INSERT, UPDATE` (sin DELETE: se desactivan) |
+| usuarios | `SELECT, INSERT` y `UPDATE (nombre, clave_hash, rol_id, activo, debe_cambiar_clave, ultimo_acceso, updated_at)`. Sin DELETE (se desactivan) y el correo no cambia |
 | sesiones | `SELECT, INSERT, UPDATE, DELETE` |
-| roles | `SELECT, INSERT, UPDATE, DELETE` |
+| roles | `SELECT, INSERT, DELETE` y `UPDATE (nombre, descripcion, updated_at)`. El trigger impide crear roles de sistema desde la app |
 | rol_permiso | `SELECT, INSERT, DELETE` |
 | auditoria | **`SELECT, INSERT`**. Sin UPDATE ni DELETE: es de solo escritura y lectura |
 
@@ -277,10 +278,12 @@ En `detalle` van IDs y valores antes/después, **nunca** nombres, teléfonos ni 
 **Pedido** (solo recogida en la clínica):
 
 ```text
-pendiente ──► confirmado (listo para recoger) ──► entregado
-    │                    │
-    └────────────────────┴──► cancelado (devuelve el stock)
+pendiente ──► confirmado ──► pagado ──► entregado
+    │              │
+    └──────────────┴──► cancelado (devuelve el stock)
 ```
+
+Solo se entrega un pedido pagado. Un pedido pagado no se cancela desde el panel: si hay que devolver el dinero, se resuelve fuera de la web y queda pendiente definir ese caso.
 
 **Cancelar:**
 - Solo desde `pendiente` o `confirmado`.
@@ -344,7 +347,7 @@ Las dos máquinas viven en `src/lib/estados.ts` como funciones puras con pruebas
 Lo detallaré con SQL exacto en `docs/base-de-datos.md`:
 1. Correr `pnpm db:migrate`.
 2. Poner contraseña a `vitalis_admin`.
-3. Añadir `DATABASE_URL_ADMIN`, `SUPERADMIN_EMAIL` y `AUTH_SECRET` (para el HMAC del correo) al `.env` y a Vercel.
+3. Añadir `DATABASE_URL_ADMIN` y `SUPERADMIN_EMAIL` al `.env` y `DATABASE_URL_ADMIN` a Vercel. El HMAC del correo reutiliza `IP_HASH_SALT` con otro prefijo.
 4. Correr `pnpm db:crear-superadmin`.
 
 ## 11. Preguntas
@@ -380,7 +383,20 @@ Para que RLS no afecte al resto, las otras tablas y roles llevan sus políticas 
 | :-- | :-- |
 | Base de datos | Migración no destructiva: `direccion` y `municipio` pasan a opcionales (los datos existentes se conservan) y se dejan de pedir. El enum `estado_pedido` se recrea sin `enviado`: ningún pedido lo usa, así que la migración es segura y lo comprueba antes |
 | `/pedido` | "Datos de entrega" pasa a "Tus datos": nombre, teléfono, correo opcional y notas. Mensaje final: "Te avisaremos cuando esté listo para recoger en la clínica" |
-| Textos | "Cómo pedir", FAQ ("¿Hacen domicilios?" → "No, los pedidos se recogen en la clínica en Girardot"; "¿Cómo pago?" → "Pagas al recoger en la clínica"), términos, tienda y mensaje de WhatsApp |
+| Textos | "Cómo pedir", FAQ ("¿Hacen domicilios?" → "No, los pedidos se recogen en la clínica en Girardot"; "¿Cómo pago?" → "Por transferencia cuando te confirmemos el pedido por WhatsApp"), términos, tienda y mensaje de WhatsApp |
 | Stock | Se reserva al crear el pedido y vuelve al cancelarlo. Los pedidos que nadie recoge se cancelan a mano desde el panel |
 
-Medios de pago aceptados en la clínica (efectivo, tarjeta, transferencia) siguen pendientes de confirmar.
+Los datos de pago (Nequi, Daviplata, cuenta o llave Bre-B) no van en la web: los envía la clínica por WhatsApp.
+
+
+## 14. Ajustes que salieron de las pruebas de la 4A
+
+| Hallazgo | Corrección |
+| :-- | :-- |
+| Drizzle nombra todas las columnas en los INSERT (con `DEFAULT`) y PostgreSQL exige permiso sobre cada una, así que los INSERT por columna fallaban | INSERT por tabla en `roles` y `usuarios`. Que la app no cree roles de sistema lo garantiza el trigger (solo el dueño de la tabla puede). Los UPDATE siguen siendo por columna |
+| Astro devuelve el mensaje de cualquier error inesperado también en producción; con Drizzle incluye el SQL y sus parámetros | `protegerErrores()` envuelve todas las Actions (también las públicas): registra el error en el servidor y responde con un mensaje genérico |
+| La validación de entrada corre antes que la autorización: sin sesión se recibía 400 y se veían los nombres de los campos | El middleware responde 401 a cualquier Action del panel sin sesión, llegue por `/_actions/` o por `?_action=` en cualquier página |
+| Astro solo reconoce una lista de checkboxes si el esquema la declara con `.default()` por fuera; con un solo permiso marcado llegaba un texto | `permisos: z.array(...).default([])`; probado con 0, 1 y 3 permisos |
+| En consultas de una sola tabla, Drizzle no califica las columnas dentro de `sql`: la subconsulta de permisos del rol se correlacionaba mal y el editor mostraba los roles vacíos | Consultas reescritas con JOIN y GROUP BY |
+| Calcular el hash falso en la primera petición duplicaba el tiempo y delataba que el correo no existía | Hash falso constante (de una clave aleatoria descartada) |
+| `dorado-700` sobre `arena-100` daba 4,21:1, por debajo de AA | Token oscurecido a `#7A5C24` (5,2:1). Afectaba también a secciones de la portada y a la tienda |

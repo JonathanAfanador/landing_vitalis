@@ -7,16 +7,22 @@ La web usa PostgreSQL en Neon con Drizzle ORM. Las tablas viven en el schema `vi
 | `src/db/schema.ts` | Tablas, enums, relaciones, CHECKs e índices |
 | `drizzle/0000_catalogo_y_pedidos.sql` | Crea el schema y las tablas (generada desde `schema.ts`) |
 | `drizzle/0001_rol_app_y_datos_base.sql` | Crea el rol `vitalis_app` con permisos mínimos y carga especies y categorías |
+| `drizzle/0002_panel_usuarios_roles_auditoria.sql` | Tablas del panel: roles, permisos, rol_permiso, usuarios, sesiones y auditoría |
+| `drizzle/0003_rol_admin_triggers_y_roles_base.sql` | Rol `vitalis_admin`, triggers de protección, roles base y endurece `vitalis_app` |
+| `scripts/sincronizar-permisos.ts` | Copia el catálogo de permisos del código a la base (corre solo con `pnpm db:migrate`) |
+| `scripts/crear-superadmin.ts` | Crea el primer superadmin |
 | `scripts/seed-demo.ts` | Medicamentos de ejemplo `[DEMO]`, solo para desarrollo |
 
-## Dos usuarios, dos cadenas
+## Tres usuarios, tres cadenas
 
 | Variable | Usuario | Conexión | Para qué |
 | :-- | :-- | :-- | :-- |
 | `DATABASE_URL_MIGRACIONES` | `neondb_owner` | Directa (sin `-pooler`) | Crear y actualizar tablas. Solo en tu PC |
-| `DATABASE_URL` | `vitalis_app` | Con pooling (`-pooler`) | La web. En tu PC y en Vercel |
+| `DATABASE_URL` | `vitalis_app` | Con pooling (`-pooler`) | La web pública. En tu PC y en Vercel |
+| `DATABASE_URL_ADMIN` | `vitalis_admin` | Con pooling (`-pooler`) | El panel `/admin`. En tu PC y en Vercel |
 
-`vitalis_app` solo puede leer el catálogo, crear pedidos y descontar stock. No puede borrar nada ni cambiar tablas, así que un fallo en la web no puede dañar la base de datos.
+- `vitalis_app` solo puede leer el catálogo, crear pedidos y descontar stock. No puede borrar nada, ni ver usuarios, sesiones o auditoría, ni leer los datos personales de los pedidos.
+- `vitalis_admin` gestiona usuarios, roles y sesiones. La auditoría solo la puede insertar y leer, nunca editar ni borrar.
 
 ## Paso a paso (una sola vez)
 
@@ -74,6 +80,74 @@ En tu PC, en la carpeta del proyecto, con `.env` ya creado.
 
    Abre `http://localhost:4321/tienda`. Si no hay medicamentos verás "Estamos preparando el catálogo": es correcto, la base está vacía.
 
+## Fase 4A: panel, roles y superadmin
+
+En tu PC, después de bajar los cambios de `dev_jonathan`:
+
+1. **Instala dependencias y migra.** Crea las tablas nuevas, el rol `vitalis_admin` y los roles base, y sincroniza los permisos:
+
+   ```bash
+   pnpm install
+   ```
+
+   ```bash
+   pnpm db:migrate
+   ```
+
+   Debe terminar con "Permisos sincronizados: 4 en el catálogo".
+
+2. **Dale contraseña al usuario del panel.** Genera otra contraseña (distinta de la de `vitalis_app`):
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
+   ```
+
+   Y en Neon > **SQL Editor** ejecuta:
+
+   ```sql
+   ALTER ROLE vitalis_admin WITH LOGIN PASSWORD 'la-contraseña-generada';
+   ```
+
+   Igual que con `vitalis_app`: no lo crees desde el panel de Roles de Neon.
+
+3. **Añade al `.env`** la cadena del panel (la de pooling, con `vitalis_admin` y su contraseña) y el correo del superadmin:
+
+   ```bash
+   DATABASE_URL_ADMIN="postgresql://vitalis_admin:la-contraseña-generada@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+   SUPERADMIN_EMAIL="tu-correo@ejemplo.com"
+   ```
+
+4. **Crea el superadmin.** Te pedirá una contraseña temporal dos veces (no se ve al escribir; mínimo 12 caracteres):
+
+   ```bash
+   pnpm db:crear-superadmin
+   ```
+
+5. **Entra** en `http://localhost:4321/admin/login` con `pnpm dev`. Te pedirá cambiar la contraseña antes de continuar.
+
+6. **En Vercel**, añade `DATABASE_URL_ADMIN` en Settings > Environment Variables. `SUPERADMIN_EMAIL` no hace falta allí.
+
+### Comprobar que todo quedó bien (opcional)
+
+En el SQL Editor de Neon:
+
+```sql
+-- Deben salir superadmin, admin y usuario (es_sistema = true)
+SELECT slug, es_sistema FROM vitalis.roles ORDER BY id;
+-- Debe haber exactamente un superadmin activo
+SELECT u.email, u.activo FROM vitalis.usuarios u JOIN vitalis.roles r ON r.id = u.rol_id WHERE r.slug = 'superadmin';
+```
+
+### Si te quedas sin acceso
+
+Si olvidas la contraseña del superadmin, pon su correo en `SUPERADMIN_EMAIL` y vuelve a ejecutar:
+
+```bash
+pnpm db:crear-superadmin
+```
+
+Restablece la contraseña (pidiéndola por consola), cierra sus sesiones y obliga a cambiarla al entrar. Funciona porque usa las credenciales de dueño de la base, que solo tienes tú. Para no depender de una sola cuenta, crea un segundo superadmin desde el panel.
+
 ## Datos de ejemplo (opcional)
 
 No los cargues en `production`. Crea una rama en Neon (**Branches > New branch**, por ejemplo `desarrollo`), copia su cadena directa en `DATABASE_URL_MIGRACIONES` y ejecuta:
@@ -86,7 +160,7 @@ Carga 8 medicamentos con el prefijo `[DEMO]`. La rama tiene su propio usuario `v
 
 ## En Vercel
 
-En **Settings > Environment Variables** añade `DATABASE_URL` (la de `vitalis_app` con pooling) e `IP_HASH_SALT`. `DATABASE_URL_MIGRACIONES` **no** va en Vercel: las migraciones se corren desde tu PC.
+En **Settings > Environment Variables** añade `DATABASE_URL` (la de `vitalis_app` con pooling), `DATABASE_URL_ADMIN` (la de `vitalis_admin` con pooling) e `IP_HASH_SALT`. `DATABASE_URL_MIGRACIONES` y `SUPERADMIN_EMAIL` **no** van en Vercel: las migraciones y el superadmin se hacen desde tu PC.
 
 ## Cambiar el esquema más adelante
 

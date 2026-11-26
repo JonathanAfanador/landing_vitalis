@@ -1,0 +1,11 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import SinPermiso from '../../components/admin/SinPermiso.astro';
+
+export const prerender = false;
+Astro.response.status = 403;
+---
+
+<AdminLayout titulo="Sin acceso">
+  <SinPermiso />
+</AdminLayout>

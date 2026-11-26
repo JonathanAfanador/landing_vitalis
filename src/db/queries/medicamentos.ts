@@ -26,6 +26,7 @@ const leerCursor = (valor: string | undefined): Cursor | null => {
 
 const escaparLike = (texto: string) => texto.replace(/[\\%_]/g, (c) => `\\${c}`);
 
+// Solo se usa en consultas con JOIN: así Drizzle califica las columnas y la subconsulta se correlaciona bien.
 const especiesDelMedicamento = sql<string[]>`coalesce((
   select array_agg(${especies.slug} order by ${especies.slug})
   from ${medicamentoEspecie}

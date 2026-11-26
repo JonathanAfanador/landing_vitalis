@@ -1,0 +1,131 @@
+---
+import { actions } from 'astro:actions';
+import { Font } from 'astro:assets';
+import '../styles/global.css';
+import isotipo from '../assets/brand/isotipo.svg';
+import { can } from '../admin/autorizacion';
+import { GESTIONAR_ROLES, type Capacidad } from '../admin/permisos';
+
+interface Props {
+  titulo: string;
+}
+
+const { titulo } = Astro.props;
+const usuario = Astro.locals.usuario;
+const ruta = Astro.url.pathname;
+
+// El menú solo muestra lo que el usuario puede usar; la autorización real está en cada página y Action.
+const menu: { texto: string; href: string; capacidad?: Capacidad }[] = [
+  { texto: 'Resumen', href: '/admin' },
+  { texto: 'Usuarios', href: '/admin/usuarios', capacidad: 'usuarios:ver' },
+  { texto: 'Roles', href: '/admin/roles', capacidad: GESTIONAR_ROLES },
+  { texto: 'Auditoría', href: '/admin/auditoria', capacidad: 'auditoria:ver' },
+];
+const visibles = menu.filter((item) => !item.capacidad || can(usuario, item.capacidad));
+const activo = (href: string) => (href === '/admin' ? ruta === href : ruta.startsWith(href));
+---
+
+<!doctype html>
+<html lang="es-CO">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>{titulo} · Panel Vitalis</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <Font cssVariable="--font-cormorant" />
+    <Font cssVariable="--font-manrope" preload />
+  </head>
+  <body class="min-h-svh bg-crema-50">
+    <a
+      href="#contenido"
+      class="btn-principal fixed top-3 left-3 z-60 -translate-y-24 focus-visible:translate-y-0"
+    >
+      Saltar al contenido
+    </a>
+    {usuario && (
+      <header class="border-b border-azul-900/10 bg-crema-50">
+        <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
+          <a href="/admin" class="flex items-center gap-2">
+            <img src={isotipo.src} alt="" width="40" height="31" class="h-8 w-auto" />
+            <span class="font-serif text-2xl font-semibold uppercase">Vitalis</span>
+            <span class="caption-3 rounded-full bg-arena-100 px-2 py-1 text-dorado-700">Panel</span>
+          </a>
+          <div class="flex items-center gap-3">
+            <p class="body-6 text-right">
+              <span class="block font-medium">{usuario.nombre}</span>
+              <span class="text-tinta-600">{usuario.rolNombre}</span>
+            </p>
+            <form method="POST" action={`/admin/login${actions.admin.auth.salir}`}>
+              <button type="submit" class="btn-borde min-h-10 px-4 text-sm">
+                Salir
+              </button>
+            </form>
+          </div>
+        </div>
+        <nav aria-label="Panel" class="mx-auto max-w-6xl overflow-x-auto px-4 sm:px-6">
+          <ul class="flex gap-1">
+            {visibles.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  aria-current={activo(item.href) ? 'page' : undefined}
+                  class="body-6 inline-block border-b-2 border-transparent px-3 py-3 font-medium whitespace-nowrap text-tinta-600 hover:text-azul-900 aria-[current=page]:border-dorado-400 aria-[current=page]:text-azul-900"
+                >
+                  {item.texto}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </header>
+    )}
+    <main id="contenido" class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <slot />
+    </main>
+
+    <dialog
+      class="m-auto w-[min(28rem,calc(100%-2rem))] rounded-3xl bg-crema-50 p-6 text-azul-900 backdrop:bg-azul-900/50"
+      data-confirmacion
+    >
+      <p class="title-2" data-confirmacion-texto></p>
+      <div class="mt-6 flex justify-end gap-3">
+        <button type="button" class="btn-borde" data-confirmacion-cancelar>
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn button-md bg-error-700 text-crema-50 hover:opacity-90"
+          data-confirmacion-aceptar
+        >
+          Confirmar
+        </button>
+      </div>
+    </dialog>
+
+    <script>
+      // Confirmación antes de acciones destructivas: cualquier formulario con data-confirmar="mensaje".
+      const dialogo = document.querySelector<HTMLDialogElement>('[data-confirmacion]');
+      const texto = document.querySelector<HTMLElement>('[data-confirmacion-texto]');
+      let pendiente: HTMLFormElement | null = null;
+
+      document.addEventListener('submit', (event) => {
+        const form = event.target as HTMLFormElement;
+        if (!form.dataset.confirmar || form.dataset.confirmado || !dialogo || !texto) return;
+        event.preventDefault();
+        pendiente = form;
+        texto.textContent = form.dataset.confirmar;
+        dialogo.showModal();
+      });
+      document
+        .querySelector('[data-confirmacion-cancelar]')
+        ?.addEventListener('click', () => dialogo?.close());
+      document.querySelector('[data-confirmacion-aceptar]')?.addEventListener('click', () => {
+        dialogo?.close();
+        if (!pendiente) return;
+        pendiente.dataset.confirmado = 'si';
+        pendiente.requestSubmit();
+      });
+    </script>
+  </body>
+</html>
