@@ -5,6 +5,7 @@ import { COOKIE_SESION, validarSesion } from './admin/sesiones';
 const LECTURA = new Set(['GET', 'HEAD', 'OPTIONS']);
 const RUTAS_SIN_SESION = new Set(['/admin/login']);
 const SIN_PERMISO = '/admin/sin-permiso';
+const CAMBIAR_CLAVE = '/admin/cambiar-clave';
 // Actions del panel que se pueden llamar sin sesión.
 const ACTIONS_SIN_SESION = new Set(['admin.auth.ingresar', 'admin.auth.salir']);
 
@@ -39,9 +40,13 @@ export const onRequest = defineMiddleware(async (ctx, next) => {
 
   if (esPanel && !RUTAS_SIN_SESION.has(pathname)) {
     if (!usuario) return ctx.redirect('/admin/login');
-    if (usuario.debeCambiarClave && pathname !== '/admin/cambiar-clave')
-      return ctx.redirect('/admin/cambiar-clave');
-    if (!puedeEntrarAlPanel(usuario) && pathname !== SIN_PERMISO) return ctx.rewrite(SIN_PERMISO);
+    // Primero la contraseña temporal: hasta cambiarla, solo existe esa página. Va antes que el control de
+    // acceso para que un usuario sin permisos de panel no rebote entre "cambiar contraseña" y "sin acceso".
+    if (usuario.debeCambiarClave) {
+      if (pathname !== CAMBIAR_CLAVE) return ctx.redirect(CAMBIAR_CLAVE);
+    } else if (!puedeEntrarAlPanel(usuario) && pathname !== SIN_PERMISO && pathname !== CAMBIAR_CLAVE) {
+      return ctx.rewrite(SIN_PERMISO);
+    }
   }
 
   const respuesta = await next();
