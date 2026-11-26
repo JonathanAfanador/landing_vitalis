@@ -6,6 +6,7 @@ import AvisoCarrito from '../../components/tienda/AvisoCarrito.astro';
 import Icono from '../../components/ui/Icono.astro';
 import Pending from '../../components/ui/Pending.astro';
 import { listarCategorias, listarEspecies, listarMedicamentos } from '../../db/queries/medicamentos';
+import { registrarError } from '../../lib/registro';
 import { SLUG } from '../../lib/validacion';
 
 export const prerender = false;
@@ -37,7 +38,7 @@ try {
   // El pedido siempre recalcula precio y stock, así que un minuto de diferencia no afecta lo que se cobra.
   Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
 } catch (error) {
-  console.error('[tienda] no se pudo leer el catálogo', error);
+  registrarError('tienda', error);
   Astro.response.status = 503;
 }
 

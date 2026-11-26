@@ -1,4 +1,5 @@
 import { ActionError } from 'astro:actions';
+import { registrarError } from './registro';
 
 // Astro devuelve el mensaje de cualquier error inesperado tal cual, también en producción. Con Drizzle ese
 // mensaje trae el SQL y sus parámetros (datos personales incluidos). Este envoltorio lo registra en el
@@ -10,7 +11,7 @@ export const protegerErrores =
       return await handler(...args);
     } catch (error) {
       if (error instanceof ActionError) throw error;
-      console.error('[action] error inesperado', error);
+      registrarError('action', error);
       throw new ActionError({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'No pudimos completar la operación. Inténtalo de nuevo en unos segundos.',

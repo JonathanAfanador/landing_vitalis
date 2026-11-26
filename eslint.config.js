@@ -10,6 +10,9 @@ export default defineConfig(
   ...tseslint.configs.strict,
   ...astro.configs.recommended,
   { languageOptions: { globals: { ...globals.browser, ...globals.node } } },
+  // Nada de console en el código de la web: los errores del servidor pasan por src/lib/registro.ts.
+  // Los scripts de terminal (scripts/) sí escriben en consola: es su forma de hablar con quien los ejecuta.
+  { files: ['src/**/*.{ts,astro}'], ignores: ['src/lib/registro.ts'], rules: { 'no-console': 'error' } },
   // La conexión del panel (rol vitalis_admin) solo se usa en el panel: las páginas públicas usan vitalis_app.
   {
     files: ['src/**/*.{ts,astro}'],
