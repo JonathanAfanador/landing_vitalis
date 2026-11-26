@@ -37,7 +37,7 @@ En tu PC, en la carpeta del proyecto, con `.env` ya creado.
 2. **Pon la cadena directa** (la de `neondb_owner` sin `-pooler`) en `.env`:
 
    ```bash
-   DATABASE_URL_MIGRACIONES="postgresql://neondb_owner:<contraseña>@ep-...us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+   DATABASE_URL_MIGRACIONES="postgresql://neondb_owner:<contraseña>@ep-...us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
    ```
 
 3. **Crea las tablas**:
@@ -63,7 +63,7 @@ En tu PC, en la carpeta del proyecto, con `.env` ya creado.
 5. **Arma `DATABASE_URL`**: copia la cadena **con pooling** y cambia usuario y contraseña:
 
    ```bash
-   DATABASE_URL="postgresql://vitalis_app:la-contraseña-generada@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+   DATABASE_URL="postgresql://vitalis_app:la-contraseña-generada@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
    ```
 
 6. **Genera la sal del límite de envíos** y ponla en `.env` como `IP_HASH_SALT`:
@@ -113,7 +113,7 @@ En tu PC, después de bajar los cambios de `dev_jonathan`:
 3. **Añade al `.env`** la cadena del panel (la de pooling, con `vitalis_admin` y su contraseña) y el correo del superadmin:
 
    ```bash
-   DATABASE_URL_ADMIN="postgresql://vitalis_admin:la-contraseña-generada@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+   DATABASE_URL_ADMIN="postgresql://vitalis_admin:la-contraseña-generada@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
    SUPERADMIN_EMAIL="tu-correo@ejemplo.com"
    ```
 

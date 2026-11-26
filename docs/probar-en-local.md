@@ -108,8 +108,8 @@ Para empezar basta con `DATABASE_URL_MIGRACIONES`; las demás se completan en el
 4. **Completa el `.env`.** Toma tu cadena **con pooling** (la que tiene `-pooler`), cambia `neondb_owner` por el usuario y pon su contraseña:
 
    ```bash
-   DATABASE_URL="postgresql://vitalis_app:contraseña-1@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-   DATABASE_URL_ADMIN="postgresql://vitalis_admin:contraseña-2@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+   DATABASE_URL="postgresql://vitalis_app:contraseña-1@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
+   DATABASE_URL_ADMIN="postgresql://vitalis_admin:contraseña-2@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
    IP_HASH_SALT="el-tercer-texto"
    SUPERADMIN_EMAIL="tu-correo@ejemplo.com"
    ```
@@ -182,6 +182,7 @@ pnpm dev
 | `Falta DATABASE_URL_MIGRACIONES` | El `.env` no está en la raíz del proyecto o el nombre de la variable está mal escrito |
 | `password authentication failed for user "vitalis_app"` | La contraseña del `.env` no coincide con la del `ALTER ROLE`. Repite el paso 4.3 |
 | `role "vitalis_app" does not exist` | Falta `pnpm db:migrate` |
+| `SECURITY WARNING: The SSL modes 'prefer', 'require'...` | Solo es un aviso. En las cadenas del `.env` cambia `sslmode=require` por `sslmode=verify-full` y desaparece |
 | `Port 4321 is in use` | Ya hay otra terminal con `pnpm dev` abierta; ciérrala |
 | La tienda dice "No pudimos cargar el catálogo" | Revisa `DATABASE_URL` (usuario `vitalis_app` y cadena **con** `-pooler`) |
 | El login del panel no deja entrar | Revisa `DATABASE_URL_ADMIN`. Tras 5 intentos fallidos la cuenta se bloquea 15 minutos |
