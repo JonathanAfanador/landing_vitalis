@@ -4,11 +4,13 @@ Guía paso a paso para ver la página y el panel en tu computador. Los comandos 
 
 ## 1. Instalar lo necesario (una sola vez)
 
-1. **Node.js 22 o superior:**
+1. **Node.js 24 (LTS)**, o como mínimo 22.23.4, que es lo que pide Astro:
 
    ```bash
    winget install OpenJS.NodeJS.LTS
    ```
+
+   Si ya tenías una versión anterior, actualízala con `winget upgrade OpenJS.NodeJS.LTS`.
 
 2. **Git**, si no lo tienes:
 
@@ -175,6 +177,8 @@ pnpm dev
 | Mensaje | Qué hacer |
 | :-- | :-- |
 | `pnpm` o `node` "no se reconoce" | Cierra y abre la terminal. Si sigue, reinstala el paso 1 |
+| `Unsupported engine ... wanted: {"node":">=22.23.4"}` | Tu Node es viejo. Actualízalo (paso 1) y vuelve a ejecutar `pnpm install` |
+| `ERR_PNPM_IGNORED_BUILDS` | Trae los últimos cambios con `git pull`: el proyecto ya autoriza esos paquetes en `pnpm-workspace.yaml` |
 | `Falta DATABASE_URL_MIGRACIONES` | El `.env` no está en la raíz del proyecto o el nombre de la variable está mal escrito |
 | `password authentication failed for user "vitalis_app"` | La contraseña del `.env` no coincide con la del `ALTER ROLE`. Repite el paso 4.3 |
 | `role "vitalis_app" does not exist` | Falta `pnpm db:migrate` |

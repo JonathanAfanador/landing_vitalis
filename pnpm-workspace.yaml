@@ -1,0 +1,4 @@
+# Paquetes a los que se permite ejecutar su script de instalación (pnpm 11 lo exige de forma explícita).
+allowBuilds:
+  esbuild: true
+  sharp: true
