@@ -1,0 +1,14 @@
+---
+interface Props {
+  stock: number;
+}
+
+const { stock } = Astro.props;
+const texto = stock === 0 ? 'Agotado' : stock <= 3 ? `Quedan ${stock}` : 'Disponible';
+const color = stock === 0 ? 'text-tinta-600' : stock <= 3 ? 'text-dorado-700' : 'text-azul-900';
+---
+
+<p class:list={['body-6 flex items-center gap-2', color]}>
+  <span class:list={['size-2 rounded-full', stock === 0 ? 'bg-tinta-600' : 'bg-dorado-400']}></span>
+  {texto}
+</p>

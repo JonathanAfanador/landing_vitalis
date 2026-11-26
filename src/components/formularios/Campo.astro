@@ -1,0 +1,42 @@
+---
+// Campo de formulario con etiqueta visible, ayuda opcional y error junto al campo.
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'input'> {
+  name: string;
+  etiqueta: string;
+  ayuda?: string;
+  multilinea?: boolean;
+}
+
+const { name, etiqueta, ayuda, multilinea = false, ...atributos } = Astro.props;
+const id = `campo-${name}`;
+const describe = [ayuda && `${id}-ayuda`, `${id}-error`].filter(Boolean).join(' ');
+const estilo =
+  'w-full rounded-2xl border border-azul-900/20 bg-crema-50 px-4 py-3 text-base text-azul-900 transition duration-300 ease-base hover:border-azul-900/40 aria-invalid:border-error-700';
+---
+
+<div>
+  <label for={id} class="mb-2 block text-sm font-medium">
+    {etiqueta}
+    {!atributos.required && <span class="font-normal text-tinta-600"> (opcional)</span>}
+  </label>
+  {multilinea ? (
+    <textarea
+      id={id}
+      name={name}
+      rows="3"
+      class={estilo}
+      aria-describedby={describe}
+      maxlength={atributos.maxlength}
+    />
+  ) : (
+    <input id={id} name={name} class:list={[estilo, 'min-h-11']} aria-describedby={describe} {...atributos} />
+  )}
+  {ayuda && (
+    <p id={`${id}-ayuda`} class="caption-5 mt-1 text-tinta-600">
+      {ayuda}
+    </p>
+  )}
+  <p id={`${id}-error`} class="body-6 mt-1 text-error-700" data-error={name}></p>
+</div>

@@ -1,9 +1,13 @@
 ---
 import Icono from '../ui/Icono.astro';
 import Pending from '../ui/Pending.astro';
+import { contacto } from '../../data/vitalis';
 import { enlaceWhatsApp } from '../../lib/whatsapp';
 
-const whatsapp = enlaceWhatsApp('Hola, quiero agendar una valoración ortopédica para mi mascota.');
+const whatsapp = enlaceWhatsApp(
+  contacto.whatsapp,
+  'Hola, quiero agendar una valoración ortopédica para mi mascota.',
+);
 ---
 
 <section id="valoracion" class="px-4 py-16 sm:px-6 lg:py-24">

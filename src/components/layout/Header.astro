@@ -1,5 +1,6 @@
 ---
 import isotipo from '../../assets/brand/isotipo.svg';
+import Icono from '../ui/Icono.astro';
 import { cta, navegacion, negocio } from '../../data/vitalis';
 
 const enPortada = Astro.url.pathname === '/';
@@ -30,6 +31,19 @@ const enlace = (href: string) => (href.startsWith('#') && !enPortada ? `/${href}
     </nav>
 
     <div class="flex items-center gap-2">
+      <a
+        href="/pedido"
+        class="relative grid size-11 place-items-center rounded-full transition duration-300 ease-base hover:bg-arena-100"
+        aria-label="Tu pedido"
+        data-carrito-enlace
+      >
+        <Icono nombre="shopping-bag" />
+        <span
+          class="absolute top-0.5 right-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-dorado-400 px-1 text-xs font-semibold text-azul-900"
+          hidden
+          data-carrito-contador
+        ></span>
+      </a>
       <a
         href={cta.principal.href}
         class="btn button-sm hidden min-h-10 bg-azul-900 px-4 text-crema-50 hover:bg-azul-700 sm:inline-flex"
@@ -117,6 +131,22 @@ const enlace = (href: string) => (href.startsWith('#') && !enPortada ? `/${href}
 </style>
 
 <script>
+  import { alCambiar, totalUnidades } from '../../scripts/cart';
+
+  const enlaceCarrito = document.querySelector<HTMLElement>('[data-carrito-enlace]');
+  const contador = document.querySelector<HTMLElement>('[data-carrito-contador]');
+  const pintarContador = (unidades = totalUnidades()) => {
+    if (!enlaceCarrito || !contador) return;
+    contador.hidden = unidades === 0;
+    contador.textContent = String(unidades);
+    enlaceCarrito.setAttribute(
+      'aria-label',
+      unidades ? `Tu pedido, ${unidades} ${unidades === 1 ? 'unidad' : 'unidades'}` : 'Tu pedido',
+    );
+  };
+  pintarContador();
+  alCambiar((items) => pintarContador(totalUnidades(items)));
+
   const toggle = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
   const menu = document.querySelector<HTMLElement>('[data-menu]');
 

@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig, fontProviders } from 'astro/config';
+import { defineConfig, envField, fontProviders } from 'astro/config';
 import vercel from '@astrojs/vercel';
 import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
@@ -11,6 +11,12 @@ export default defineConfig({
   site,
   trailingSlash: 'never',
   adapter: vercel(),
+  env: {
+    schema: {
+      DATABASE_URL: envField.string({ context: 'server', access: 'secret' }),
+      IP_HASH_SALT: envField.string({ context: 'server', access: 'secret', min: 16 }),
+    },
+  },
   integrations: [
     sitemap({
       filter: (page) => !/\/(admin|pedido|404)/.test(page),

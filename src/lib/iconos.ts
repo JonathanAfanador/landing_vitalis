@@ -25,6 +25,15 @@ import arrowRight from '@phosphor-icons/core/regular/arrow-right.svg?raw';
 import arrowDown from '@phosphor-icons/core/regular/arrow-down.svg?raw';
 import caretDown from '@phosphor-icons/core/regular/caret-down.svg?raw';
 import calendarCheck from '@phosphor-icons/core/regular/calendar-check.svg?raw';
+import shoppingBag from '@phosphor-icons/core/regular/shopping-bag.svg?raw';
+import minus from '@phosphor-icons/core/regular/minus.svg?raw';
+import plus from '@phosphor-icons/core/regular/plus.svg?raw';
+import trash from '@phosphor-icons/core/regular/trash.svg?raw';
+import magnifyingGlass from '@phosphor-icons/core/regular/magnifying-glass.svg?raw';
+import warningCircle from '@phosphor-icons/core/regular/warning-circle.svg?raw';
+import checkCircle from '@phosphor-icons/core/regular/check-circle.svg?raw';
+import prescription from '@phosphor-icons/core/regular/prescription.svg?raw';
+import paquete from '@phosphor-icons/core/regular/package.svg?raw';
 
 export const iconos = {
   bone: bone,
@@ -52,6 +61,15 @@ export const iconos = {
   'arrow-down': arrowDown,
   'caret-down': caretDown,
   'calendar-check': calendarCheck,
+  'shopping-bag': shoppingBag,
+  minus: minus,
+  plus: plus,
+  trash: trash,
+  'magnifying-glass': magnifyingGlass,
+  'warning-circle': warningCircle,
+  'check-circle': checkCircle,
+  prescription: prescription,
+  package: paquete,
 };
 
 export type NombreIcono = keyof typeof iconos;

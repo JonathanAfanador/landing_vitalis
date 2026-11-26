@@ -9,6 +9,7 @@
   --color-arena-100: #f3eadb;
   --color-tinta-600: #4b5567;
   --color-azul-led: #2b4fc7;
+  --color-error-700: #b42318;
 
   --font-serif: var(--font-cormorant);
   --font-sans: var(--font-manrope);
@@ -154,4 +155,9 @@
 }
 .no-js .tagline-word {
   color: inherit;
+}
+
+/* Agregar al pedido necesita JavaScript (el carrito vive en el navegador). Sin él, se entra a la ficha. */
+.no-js [data-agregar] {
+  display: none;
 }

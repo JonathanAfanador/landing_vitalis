@@ -1,0 +1,139 @@
+---
+import Pagina from '../../layouts/Pagina.astro';
+import Filtros from '../../components/tienda/Filtros.astro';
+import TarjetaMedicamento from '../../components/tienda/TarjetaMedicamento.astro';
+import AvisoCarrito from '../../components/tienda/AvisoCarrito.astro';
+import Icono from '../../components/ui/Icono.astro';
+import Pending from '../../components/ui/Pending.astro';
+import { listarCategorias, listarEspecies, listarMedicamentos } from '../../db/queries/medicamentos';
+import { SLUG } from '../../lib/validacion';
+
+export const prerender = false;
+
+const params = Astro.url.searchParams;
+const slugValido = (valor: string | null) => (valor && SLUG.test(valor) ? valor : undefined);
+const filtros = {
+  especie: slugValido(params.get('especie')),
+  categoria: slugValido(params.get('categoria')),
+  q: params.get('q')?.trim() || undefined,
+  cursor: params.get('cursor') ?? undefined,
+};
+const hayFiltros = Boolean(filtros.especie || filtros.categoria || filtros.q);
+
+let datos: {
+  resultado: Awaited<ReturnType<typeof listarMedicamentos>>;
+  categorias: Awaited<ReturnType<typeof listarCategorias>>;
+  especies: Awaited<ReturnType<typeof listarEspecies>>;
+} | null = null;
+
+try {
+  const [resultado, categorias, especies] = await Promise.all([
+    listarMedicamentos(filtros),
+    listarCategorias(),
+    listarEspecies(),
+  ]);
+  datos = { resultado, categorias, especies };
+  // La CDN guarda la página un minuto: menos consultas y la base de datos no tiene que despertar en cada visita.
+  // El pedido siempre recalcula precio y stock, así que un minuto de diferencia no afecta lo que se cobra.
+  Astro.response.headers.set('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+} catch (error) {
+  console.error('[tienda] no se pudo leer el catálogo', error);
+  Astro.response.status = 503;
+}
+
+const enlaceCon = (cursor: string | null) => {
+  const url = new URL(Astro.url);
+  if (cursor) url.searchParams.set('cursor', cursor);
+  else url.searchParams.delete('cursor');
+  return url.pathname + url.search;
+};
+---
+
+<Pagina
+  titulo="Medicamentos veterinarios en Girardot · Vitalis"
+  descripcion="Antiparasitarios, antibióticos, antiinflamatorios y más para perros y gatos. Consulta precio y disponibilidad y pide por WhatsApp."
+>
+  <div class="mx-auto max-w-6xl">
+    <p class="caption-3 text-dorado-700">Tienda</p>
+    <h1 class="heading-2 mt-3">Medicamentos veterinarios</h1>
+    <p class="body-3 mt-4 max-w-170 text-tinta-600">
+      Agrega lo que necesitas a tu pedido. Te confirmamos disponibilidad, pago y entrega por WhatsApp.
+    </p>
+
+    {datos ? (
+      <>
+        <div class="mt-8">
+          <Filtros
+            q={filtros.q ?? ''}
+            especie={filtros.especie ?? ''}
+            categoria={filtros.categoria ?? ''}
+            especies={datos.especies}
+            categorias={datos.categorias}
+          />
+        </div>
+
+        {datos.resultado.medicamentos.length ? (
+          <>
+            <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {datos.resultado.medicamentos.map((m) => (
+                <li>
+                  <TarjetaMedicamento medicamento={m} />
+                </li>
+              ))}
+            </ul>
+            <div class="mt-10 flex flex-wrap justify-center gap-3">
+              {filtros.cursor && (
+                <a href={enlaceCon(null)} class="btn-borde">
+                  Volver al inicio
+                </a>
+              )}
+              {datos.resultado.siguienteCursor && (
+                <a href={enlaceCon(datos.resultado.siguienteCursor)} class="btn-principal">
+                  Ver más medicamentos
+                  <Icono nombre="arrow-right" class="size-5" />
+                </a>
+              )}
+            </div>
+          </>
+        ) : (
+          <div class="mt-8 flex flex-col items-center rounded-3xl border border-azul-900/10 px-6 py-16 text-center">
+            <span class="grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+              <Icono nombre="package" />
+            </span>
+            <h2 class="heading-5 mt-6">
+              {hayFiltros ? 'No encontramos medicamentos con esa búsqueda' : 'Estamos preparando el catálogo'}
+            </h2>
+            <p class="body-3 mt-2 max-w-md text-tinta-600">
+              {hayFiltros
+                ? 'Prueba con otro nombre o quita algún filtro. Si no lo encuentras, pregúntanos por WhatsApp.'
+                : 'Muy pronto verás aquí los medicamentos disponibles.'}
+            </p>
+            {hayFiltros && (
+              <a href="/tienda" class="btn-borde mt-6">
+                Ver todo el catálogo
+              </a>
+            )}
+            {!hayFiltros && (
+              <Pending dato="cargar los medicamentos reales en la base de datos" class="mt-4" />
+            )}
+          </div>
+        )}
+      </>
+    ) : (
+      <div
+        class="mt-8 flex flex-col items-center rounded-3xl border border-azul-900/10 px-6 py-16 text-center"
+        role="alert"
+      >
+        <span class="grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+          <Icono nombre="warning-circle" />
+        </span>
+        <h2 class="heading-5 mt-6">No pudimos cargar el catálogo</h2>
+        <p class="body-3 mt-2 max-w-md text-tinta-600">Vuelve a intentarlo en unos segundos.</p>
+        <a href={Astro.url.pathname + Astro.url.search} class="btn-principal mt-6">
+          Reintentar
+        </a>
+      </div>
+    )}
+  </div>
+  <AvisoCarrito />
+</Pagina>

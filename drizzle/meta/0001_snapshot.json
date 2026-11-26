@@ -1,0 +1,682 @@
+{
+  "id": "d1202eb3-804d-4b9a-8556-80b4f5690638",
+  "prevId": "ecb01dca-295a-45c6-a620-9d62e3b91b5e",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "vitalis.categorias": {
+      "name": "categorias",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "categorias_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "categorias_nombre_unique": {
+          "name": "categorias_nombre_unique",
+          "columns": ["nombre"],
+          "nullsNotDistinct": false
+        },
+        "categorias_slug_unique": {
+          "name": "categorias_slug_unique",
+          "columns": ["slug"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "categorias_slug_formato": {
+          "name": "categorias_slug_formato",
+          "value": "\"vitalis\".\"categorias\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.especies": {
+      "name": "especies",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "especies_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "especies_nombre_unique": {
+          "name": "especies_nombre_unique",
+          "columns": ["nombre"],
+          "nullsNotDistinct": false
+        },
+        "especies_slug_unique": {
+          "name": "especies_slug_unique",
+          "columns": ["slug"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "especies_slug_formato": {
+          "name": "especies_slug_formato",
+          "value": "\"vitalis\".\"especies\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.medicamento_especie": {
+      "name": "medicamento_especie",
+      "schema": "vitalis",
+      "columns": {
+        "medicamento_id": {
+          "name": "medicamento_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "especie_id": {
+          "name": "especie_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "medicamento_especie_especie_id_idx": {
+          "name": "medicamento_especie_especie_id_idx",
+          "columns": [
+            {
+              "expression": "especie_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "medicamento_especie_medicamento_id_medicamentos_id_fk": {
+          "name": "medicamento_especie_medicamento_id_medicamentos_id_fk",
+          "tableFrom": "medicamento_especie",
+          "columnsFrom": ["medicamento_id"],
+          "tableTo": "medicamentos",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "medicamento_especie_especie_id_especies_id_fk": {
+          "name": "medicamento_especie_especie_id_especies_id_fk",
+          "tableFrom": "medicamento_especie",
+          "columnsFrom": ["especie_id"],
+          "tableTo": "especies",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "medicamento_especie_medicamento_id_especie_id_pk": {
+          "name": "medicamento_especie_medicamento_id_especie_id_pk",
+          "columns": ["medicamento_id", "especie_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "vitalis.medicamentos": {
+      "name": "medicamentos",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "medicamentos_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principio_activo": {
+          "name": "principio_activo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "presentacion": {
+          "name": "presentacion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "laboratorio": {
+          "name": "laboratorio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registro_ica": {
+          "name": "registro_ica",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requiere_formula": {
+          "name": "requiere_formula",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "precio_cop": {
+          "name": "precio_cop",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stock": {
+          "name": "stock",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "imagen": {
+          "name": "imagen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categoria_id": {
+          "name": "categoria_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "medicamentos_categoria_id_idx": {
+          "name": "medicamentos_categoria_id_idx",
+          "columns": [
+            {
+              "expression": "categoria_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "medicamentos_activos_nombre_idx": {
+          "name": "medicamentos_activos_nombre_idx",
+          "columns": [
+            {
+              "expression": "nombre",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"vitalis\".\"medicamentos\".\"activo\"",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "medicamentos_categoria_id_categorias_id_fk": {
+          "name": "medicamentos_categoria_id_categorias_id_fk",
+          "tableFrom": "medicamentos",
+          "columnsFrom": ["categoria_id"],
+          "tableTo": "categorias",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "medicamentos_slug_unique": {
+          "name": "medicamentos_slug_unique",
+          "columns": ["slug"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "medicamentos_slug_formato": {
+          "name": "medicamentos_slug_formato",
+          "value": "\"vitalis\".\"medicamentos\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        },
+        "medicamentos_nombre_largo": {
+          "name": "medicamentos_nombre_largo",
+          "value": "char_length(\"vitalis\".\"medicamentos\".\"nombre\") between 2 and 120"
+        },
+        "medicamentos_precio_positivo": {
+          "name": "medicamentos_precio_positivo",
+          "value": "\"vitalis\".\"medicamentos\".\"precio_cop\" > 0"
+        },
+        "medicamentos_stock_no_negativo": {
+          "name": "medicamentos_stock_no_negativo",
+          "value": "\"vitalis\".\"medicamentos\".\"stock\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.pedido_items": {
+      "name": "pedido_items",
+      "schema": "vitalis",
+      "columns": {
+        "pedido_id": {
+          "name": "pedido_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "medicamento_id": {
+          "name": "medicamento_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cantidad": {
+          "name": "cantidad",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "precio_unitario_cop": {
+          "name": "precio_unitario_cop",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "pedido_items_medicamento_id_idx": {
+          "name": "pedido_items_medicamento_id_idx",
+          "columns": [
+            {
+              "expression": "medicamento_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "pedido_items_pedido_id_pedidos_id_fk": {
+          "name": "pedido_items_pedido_id_pedidos_id_fk",
+          "tableFrom": "pedido_items",
+          "columnsFrom": ["pedido_id"],
+          "tableTo": "pedidos",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "pedido_items_medicamento_id_medicamentos_id_fk": {
+          "name": "pedido_items_medicamento_id_medicamentos_id_fk",
+          "tableFrom": "pedido_items",
+          "columnsFrom": ["medicamento_id"],
+          "tableTo": "medicamentos",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pedido_items_pedido_id_medicamento_id_pk": {
+          "name": "pedido_items_pedido_id_medicamento_id_pk",
+          "columns": ["pedido_id", "medicamento_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "pedido_items_cantidad": {
+          "name": "pedido_items_cantidad",
+          "value": "\"vitalis\".\"pedido_items\".\"cantidad\" between 1 and 99"
+        },
+        "pedido_items_precio_positivo": {
+          "name": "pedido_items_precio_positivo",
+          "value": "\"vitalis\".\"pedido_items\".\"precio_unitario_cop\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.pedidos": {
+      "name": "pedidos",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "pedidos_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre_cliente": {
+          "name": "nombre_cliente",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direccion": {
+          "name": "direccion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "municipio": {
+          "name": "municipio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_pedido",
+          "typeSchema": "vitalis",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pendiente'"
+        },
+        "total_cop": {
+          "name": "total_cop",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notas": {
+          "name": "notas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "declara_formula": {
+          "name": "declara_formula",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "acepta_tratamiento_datos": {
+          "name": "acepta_tratamiento_datos",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pedidos_estado_created_at_idx": {
+          "name": "pedidos_estado_created_at_idx",
+          "columns": [
+            {
+              "expression": "estado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "pedidos_ip_hash_created_at_idx": {
+          "name": "pedidos_ip_hash_created_at_idx",
+          "columns": [
+            {
+              "expression": "ip_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pedidos_codigo_unique": {
+          "name": "pedidos_codigo_unique",
+          "columns": ["codigo"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "pedidos_codigo_formato": {
+          "name": "pedidos_codigo_formato",
+          "value": "\"vitalis\".\"pedidos\".\"codigo\" ~ '^VIT-[A-Z2-9]{6}$'"
+        },
+        "pedidos_telefono_formato": {
+          "name": "pedidos_telefono_formato",
+          "value": "\"vitalis\".\"pedidos\".\"telefono\" ~ '^[0-9]{10}$'"
+        },
+        "pedidos_total_no_negativo": {
+          "name": "pedidos_total_no_negativo",
+          "value": "\"vitalis\".\"pedidos\".\"total_cop\" >= 0"
+        },
+        "pedidos_acepta_datos": {
+          "name": "pedidos_acepta_datos",
+          "value": "\"vitalis\".\"pedidos\".\"acepta_tratamiento_datos\""
+        },
+        "pedidos_nombre_largo": {
+          "name": "pedidos_nombre_largo",
+          "value": "char_length(\"vitalis\".\"pedidos\".\"nombre_cliente\") between 2 and 80"
+        },
+        "pedidos_notas_largo": {
+          "name": "pedidos_notas_largo",
+          "value": "char_length(\"vitalis\".\"pedidos\".\"notas\") <= 500"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "vitalis.estado_pedido": {
+      "name": "estado_pedido",
+      "schema": "vitalis",
+      "values": ["pendiente", "confirmado", "enviado", "entregado", "cancelado"]
+    }
+  },
+  "schemas": {
+    "vitalis": "vitalis"
+  },
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

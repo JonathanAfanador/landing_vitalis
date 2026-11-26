@@ -1,0 +1,62 @@
+---
+import BotonAgregar from './BotonAgregar.astro';
+import EstadoStock from './EstadoStock.astro';
+import Icono from '../ui/Icono.astro';
+import { categorias, especies } from '../../data/vitalis';
+import type { TarjetaMedicamento } from '../../db/queries/medicamentos';
+import { formatoCOP } from '../../lib/formato';
+import type { NombreIcono } from '../../lib/iconos';
+
+interface Props {
+  medicamento: TarjetaMedicamento;
+}
+
+const { medicamento: m } = Astro.props;
+const icono = (categorias.find((c) => c.slug === m.categoriaSlug)?.icono ?? 'pill') as NombreIcono;
+const especiesDe = especies.filter((e) => m.especies.includes(e.slug));
+---
+
+<article class="flex flex-col rounded-3xl bg-crema-50 p-4 ring-1 ring-azul-900/10">
+  <div class="grid aspect-4/3 place-items-center overflow-hidden rounded-2xl bg-arena-100 text-dorado-700">
+    {m.imagen ? (
+      <img src={m.imagen} alt="" loading="lazy" decoding="async" class="size-full object-contain p-4" />
+    ) : (
+      <Icono nombre={icono} class="size-12" />
+    )}
+  </div>
+  <div class="flex flex-1 flex-col gap-2 px-2 pt-4">
+    <p class="caption-3 text-dorado-700">{m.categoria}</p>
+    <h3 class="title-1">
+      <a
+        href={`/tienda/${m.slug}`}
+        class="hover:underline hover:decoration-dorado-400 hover:underline-offset-4"
+      >
+        {m.nombre}
+      </a>
+    </h3>
+    <p class="body-6 text-tinta-600">
+      {m.principioActivo} · {m.presentacion}
+    </p>
+    <div class="flex flex-wrap items-center gap-2">
+      {especiesDe.map((e) => (
+        <span class="caption-5 inline-flex items-center gap-1 rounded-full bg-arena-100 px-2 py-1">
+          <Icono nombre={e.icono as NombreIcono} class="size-4" />
+          {e.nombre}
+        </span>
+      ))}
+      {m.requiereFormula && (
+        <span class="caption-5 inline-flex items-center gap-1 rounded-full bg-azul-900 px-2 py-1 text-crema-50">
+          <Icono nombre="prescription" class="size-4" />
+          Requiere fórmula
+        </span>
+      )}
+    </div>
+    <div class="mt-auto flex items-end justify-between gap-4 pt-4">
+      <div>
+        <p class="title-1">{formatoCOP(m.precioCop)}</p>
+        <EstadoStock stock={m.stock} />
+      </div>
+      <BotonAgregar slug={m.slug} nombre={m.nombre} stock={m.stock} />
+    </div>
+  </div>
+</article>

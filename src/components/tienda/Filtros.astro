@@ -1,0 +1,72 @@
+---
+import Icono from '../ui/Icono.astro';
+
+interface Opcion {
+  slug: string;
+  nombre: string;
+}
+
+interface Props {
+  q: string;
+  especie: string;
+  categoria: string;
+  especies: Opcion[];
+  categorias: Opcion[];
+}
+
+const { q, especie, categoria, especies, categorias } = Astro.props;
+const campo =
+  'min-h-11 w-full rounded-full border border-azul-900/20 bg-crema-50 px-4 text-base text-azul-900 transition duration-300 ease-base hover:border-azul-900/40';
+---
+
+<form
+  method="get"
+  action="/tienda"
+  class="grid gap-3 rounded-3xl bg-arena-100 p-4 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end"
+  role="search"
+>
+  <div>
+    <label for="q" class="caption-3 mb-2 block text-dorado-700">
+      Buscar
+    </label>
+    <input
+      id="q"
+      name="q"
+      type="search"
+      value={q}
+      maxlength="60"
+      placeholder="Nombre o principio activo"
+      class={campo}
+    />
+  </div>
+  <div>
+    <label for="especie" class="caption-3 mb-2 block text-dorado-700">
+      Especie
+    </label>
+    <select id="especie" name="especie" class={campo}>
+      <option value="">Todas</option>
+      {especies.map((e) => (
+        <option value={e.slug} selected={e.slug === especie}>
+          {e.nombre}
+        </option>
+      ))}
+    </select>
+  </div>
+  <div>
+    <label for="categoria" class="caption-3 mb-2 block text-dorado-700">
+      Categoría
+    </label>
+    <select id="categoria" name="categoria" class={campo}>
+      <option value="">Todas</option>
+      {categorias.map((c) => (
+        <option value={c.slug} selected={c.slug === categoria}>
+          {c.nombre}
+        </option>
+      ))}
+    </select>
+  </div>
+  <button type="submit" class="btn-principal">
+    <Icono nombre="magnifying-glass" class="size-5" />
+    Buscar
+  </button>
+</form>

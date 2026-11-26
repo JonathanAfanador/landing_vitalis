@@ -1,9 +1,10 @@
 ---
 import Icono from '../ui/Icono.astro';
 import Pending from '../ui/Pending.astro';
+import { contacto } from '../../data/vitalis';
 import { enlaceWhatsApp } from '../../lib/whatsapp';
 
-const enlace = enlaceWhatsApp('Hola, vengo de la página web de Vitalis.');
+const enlace = enlaceWhatsApp(contacto.whatsapp, 'Hola, vengo de la página web de Vitalis.');
 ---
 
 {enlace ? (

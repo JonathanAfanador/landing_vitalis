@@ -1,0 +1,32 @@
+---
+import Icono from '../ui/Icono.astro';
+
+interface Props {
+  slug: string;
+  nombre: string;
+  stock: number;
+  // id del campo de cantidad, si lo hay; si no, se agrega una unidad.
+  campoCantidad?: string;
+  class?: string;
+}
+
+const { slug, nombre, stock, campoCantidad, class: className = '' } = Astro.props;
+---
+
+{stock > 0 ? (
+  <button
+    type="button"
+    class:list={['btn-principal', className]}
+    data-agregar={slug}
+    data-nombre={nombre}
+    data-cantidad={campoCantidad}
+    aria-label={`Agregar ${nombre} al pedido`}
+  >
+    <Icono nombre="plus" class="size-5" />
+    Agregar
+  </button>
+) : (
+  <button type="button" class:list={['btn button-md bg-arena-100 text-tinta-600', className]} disabled>
+    Agotado
+  </button>
+)}

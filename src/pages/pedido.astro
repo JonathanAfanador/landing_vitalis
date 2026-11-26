@@ -1,0 +1,240 @@
+---
+import Pagina from '../layouts/Pagina.astro';
+import Campo from '../components/formularios/Campo.astro';
+import Icono from '../components/ui/Icono.astro';
+import Pending from '../components/ui/Pending.astro';
+import { contacto } from '../data/vitalis';
+---
+
+<Pagina
+  titulo="Tu pedido · Vitalis"
+  descripcion="Revisa tu pedido de medicamentos veterinarios y deja tus datos de entrega."
+  noindex
+>
+  <div class="mx-auto max-w-6xl">
+    <p class="caption-3 text-dorado-700">Pedido</p>
+    <h1 class="heading-2 mt-3">Tu pedido</h1>
+
+    <noscript>
+      <p class="body-3 mt-6 rounded-2xl bg-arena-100 p-4">
+        Para hacer un pedido necesitas activar JavaScript en tu navegador.
+      </p>
+    </noscript>
+
+    <div
+      class="mt-8 flex flex-col items-center rounded-3xl border border-azul-900/10 px-6 py-16 text-center"
+      hidden
+      data-vacio
+    >
+      <span class="grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+        <Icono nombre="shopping-bag" />
+      </span>
+      <h2 class="heading-5 mt-6">Tu pedido está vacío</h2>
+      <p class="body-3 mt-2 max-w-md text-tinta-600">
+        Busca los medicamentos de tu mascota y agrégalos desde la tienda.
+      </p>
+      <a href="/tienda" class="btn-principal mt-6">
+        Ir a la tienda
+      </a>
+    </div>
+
+    <div class="mt-8 grid gap-10 lg:grid-cols-[3fr_2fr] lg:items-start" data-contenido>
+      <section aria-labelledby="titulo-lista">
+        <h2 id="titulo-lista" class="sr-only">
+          Medicamentos de tu pedido
+        </h2>
+        <ul class="divide-y divide-azul-900/10 border-y border-azul-900/10" aria-busy="true" data-lineas>
+          {[1, 2].map(() => (
+            <li class="flex animate-pulse items-center gap-4 py-4" aria-hidden="true">
+              <span class="h-5 flex-1 rounded-full bg-arena-100" />
+              <span class="h-11 w-28 rounded-full bg-arena-100" />
+              <span class="h-5 w-20 rounded-full bg-arena-100" />
+            </li>
+          ))}
+        </ul>
+        <p class="body-6 mt-4 text-error-700" role="alert" data-error-resumen></p>
+        <dl class="mt-6 flex items-baseline justify-between">
+          <dt class="title-1">Total</dt>
+          <dd class="heading-5" data-total>
+            …
+          </dd>
+        </dl>
+        <p class="caption-5 mt-2 text-tinta-600">
+          El valor final, el pago y la entrega se confirman por WhatsApp.
+        </p>
+      </section>
+
+      <section aria-labelledby="titulo-datos" class="rounded-3xl bg-arena-100 p-6">
+        <h2 id="titulo-datos" class="heading-5">
+          Datos de entrega
+        </h2>
+        <form class="mt-6 flex flex-col gap-4" novalidate data-form-pedido>
+          <Campo name="nombre" etiqueta="Nombre" autocomplete="name" required minlength={2} maxlength={80} />
+          <Campo
+            name="telefono"
+            etiqueta="Celular o WhatsApp"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel-national"
+            required
+            maxlength={20}
+            ayuda="10 dígitos, por ejemplo 300 123 4567."
+          />
+          <Campo name="email" etiqueta="Correo" type="email" autocomplete="email" maxlength={120} />
+          <Campo
+            name="direccion"
+            etiqueta="Dirección"
+            autocomplete="street-address"
+            required
+            minlength={5}
+            maxlength={160}
+          />
+          <Campo
+            name="municipio"
+            etiqueta="Municipio"
+            autocomplete="address-level2"
+            required
+            minlength={2}
+            maxlength={60}
+            placeholder="Girardot"
+          />
+          <Campo name="notas" etiqueta="Notas para la entrega" multilinea maxlength={500} />
+
+          <div class="rounded-2xl bg-crema-50 p-4" hidden data-bloque-formula>
+            <p class="body-6 flex gap-2">
+              <Icono nombre="prescription" class="size-5 shrink-0 text-dorado-700" />
+              Tu pedido incluye medicamentos que requieren fórmula médica veterinaria.
+            </p>
+            <label class="body-6 mt-3 flex gap-3">
+              <input
+                type="checkbox"
+                name="declaraFormula"
+                class="mt-0.5 size-5 shrink-0 accent-azul-900"
+                aria-describedby="campo-declaraFormula-error"
+              />
+              Tengo la fórmula y la enviaré por WhatsApp.
+            </label>
+            <p
+              id="campo-declaraFormula-error"
+              class="body-6 mt-1 text-error-700"
+              data-error="declaraFormula"
+            ></p>
+          </div>
+
+          <div>
+            <label class="body-6 flex gap-3">
+              <input
+                type="checkbox"
+                name="aceptaDatos"
+                required
+                class="mt-0.5 size-5 shrink-0 accent-azul-900"
+                aria-describedby="campo-aceptaDatos-error"
+              />
+              <span>
+                Autorizo el tratamiento de mis datos según la{' '}
+                <a
+                  href="/politica-de-datos"
+                  target="_blank"
+                  class="underline decoration-dorado-400 underline-offset-4"
+                >
+                  política de tratamiento de datos
+                </a>
+                .
+              </span>
+            </label>
+            <p id="campo-aceptaDatos-error" class="body-6 mt-1 text-error-700" data-error="aceptaDatos"></p>
+          </div>
+
+          <div class="absolute -left-full" aria-hidden="true">
+            <label>
+              No llenes este campo <input type="text" name="sitioWeb" tabindex="-1" autocomplete="off" />
+            </label>
+          </div>
+
+          <p class="body-6 text-error-700" role="alert" data-error-general></p>
+
+          <button
+            type="submit"
+            class="btn-principal w-full disabled:cursor-not-allowed disabled:opacity-60"
+            data-enviar
+          >
+            Enviar pedido
+          </button>
+        </form>
+      </section>
+    </div>
+
+    <section
+      class="mt-8 rounded-3xl border border-azul-900/10 p-6 text-center sm:p-12"
+      hidden
+      data-exito
+      data-whatsapp={contacto.whatsapp ?? ''}
+    >
+      <span class="mx-auto grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+        <Icono nombre="check-circle" />
+      </span>
+      <h2 class="heading-3 mt-6" tabindex="-1" data-exito-titulo>
+        Recibimos tu pedido
+      </h2>
+      <p class="body-3 mt-4 text-tinta-600">
+        Tu código es <strong class="font-semibold text-azul-900" data-exito-codigo></strong>. Total:
+        <strong class="font-semibold text-azul-900" data-exito-total></strong>.
+      </p>
+      <p class="body-3 mt-2 text-tinta-600">Te escribiremos para confirmar disponibilidad, pago y entrega.</p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        <a href="#" class="btn-principal" target="_blank" rel="noopener" hidden data-exito-whatsapp>
+          <Icono nombre="whatsapp-logo" class="size-5" />
+          Confirmar por WhatsApp
+        </a>
+        <a href="/tienda" class="btn-borde">
+          Volver a la tienda
+        </a>
+      </div>
+      {!contacto.whatsapp && <Pending dato="número de WhatsApp para el botón de confirmación" class="mt-4" />}
+    </section>
+  </div>
+
+  <template data-plantilla-linea>
+    <li class="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 py-4 sm:flex sm:gap-4">
+      <div class="col-span-2 sm:flex-1">
+        <p class="title-2" data-campo="nombre"></p>
+        <p class="body-6 text-tinta-600" data-campo="precio"></p>
+        <p class="body-6 text-error-700" data-campo="problema"></p>
+      </div>
+      <div
+        class="flex w-fit items-center rounded-full border border-azul-900/20"
+        data-campo="cantidad-control"
+      >
+        <button
+          type="button"
+          class="grid size-11 place-items-center rounded-full hover:bg-arena-100 disabled:opacity-40"
+          data-accion="menos"
+        >
+          <Icono nombre="minus" class="size-4" />
+        </button>
+        <span class="w-8 text-center tabular-nums" aria-live="polite" data-campo="cantidad"></span>
+        <button
+          type="button"
+          class="grid size-11 place-items-center rounded-full hover:bg-arena-100 disabled:opacity-40"
+          data-accion="mas"
+        >
+          <Icono nombre="plus" class="size-4" />
+        </button>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <p class="title-3 w-24 text-right tabular-nums" data-campo="subtotal"></p>
+        <button
+          type="button"
+          class="grid size-11 place-items-center rounded-full text-tinta-600 hover:bg-arena-100 hover:text-error-700"
+          data-accion="quitar"
+        >
+          <Icono nombre="trash" class="size-5" />
+        </button>
+      </div>
+    </li>
+  </template>
+</Pagina>
+
+<script>
+  import '../scripts/pedido';
+</script>
