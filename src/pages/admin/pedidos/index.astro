@@ -68,6 +68,9 @@ const color: Record<string, string> = {
                 <th scope="col" class="px-4 py-3">
                   Estado
                 </th>
+                <th scope="col" class="px-4 py-3">
+                  <span class="sr-only">Acciones</span>
+                </th>
               </tr>
             </thead>
             <tbody class="body-6 block divide-y divide-azul-900/10 md:table-row-group">
@@ -92,6 +95,15 @@ const color: Record<string, string> = {
                     <span class:list={['caption-3 rounded-full px-2 py-1', color[p.estado]]}>
                       {NOMBRE_ESTADO_PEDIDO[p.estado]}
                     </span>
+                  </td>
+                  <td class="block px-4 py-2 md:table-cell md:py-3 md:text-right">
+                    <a
+                      href={`/admin/pedidos/${p.id}`}
+                      class="btn-borde min-h-10 px-4 text-sm"
+                      aria-label={`Gestionar pedido ${p.codigo}`}
+                    >
+                      Gestionar
+                    </a>
                   </td>
                 </tr>
               ))}

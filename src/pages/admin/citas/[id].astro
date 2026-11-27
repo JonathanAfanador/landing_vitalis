@@ -145,6 +145,18 @@ const errorNotas = notas?.error ? notas.error.message : undefined;
             )}
           </section>
 
+          {gestiona && botones.length === 0 && (
+            <p class="body-6 rounded-2xl bg-arena-100 p-4 text-tinta-600">
+              Esta cita ya terminó ({NOMBRE_ESTADO_CITA[cita.estado].toLowerCase()}), así que no tiene más
+              cambios de estado. Puedes seguir escribiendo notas.
+            </p>
+          )}
+          {!gestiona && (
+            <p class="body-6 rounded-2xl bg-arena-100 p-4 text-tinta-600">
+              Tu rol solo permite ver las citas. Para agendarlas o cambiar su estado hace falta el permiso
+              "Gestionar citas".
+            </p>
+          )}
           {botones.length > 0 && (
             <section class="flex flex-col gap-3" aria-label="Cambiar estado">
               {botones.map((estado) => (
