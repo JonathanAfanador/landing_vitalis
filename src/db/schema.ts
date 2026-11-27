@@ -295,6 +295,8 @@ export const usuarios = vitalis.table(
     // Solo cuentas de clientes: celular para prellenar pedidos y citas, y cuándo aceptó la Ley 1581.
     telefono: text('telefono'),
     aceptaDatosEn: timestamp('acepta_datos_en', { withTimezone: true }),
+    // El cliente pidió borrar su cuenta (Ley 1581): la clínica la revisa y el superadmin la elimina.
+    eliminacionSolicitadaEn: timestamp('eliminacion_solicitada_en', { withTimezone: true }),
     ultimoAcceso: timestamp('ultimo_acceso', { withTimezone: true }),
     createdAt: creado(),
     updatedAt: actualizado(),
@@ -333,6 +335,7 @@ export const EVENTOS_AUDITORIA = [
   'logout',
   'cuenta_creada',
   'cuenta_eliminada',
+  'eliminacion_solicitada',
   'clave_cambiada',
   'clave_restablecida',
   'usuario_creado',

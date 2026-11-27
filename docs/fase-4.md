@@ -464,7 +464,7 @@ La administradora acomoda los horarios, así que la web no maneja agenda: **el f
 
 ## 19. Entrega 4D: portal de clientes
 
-Cuentas para que el cliente vea sus pedidos y citas y no escriba sus datos cada vez. **Comprar y pedir citas sin cuenta sigue funcionando igual.**
+Cuentas para que el cliente vea sus pedidos y citas y no escriba sus datos cada vez. **Cambió en la sección 20:** pedir exige cuenta, las citas no se cancelan desde la web y la eliminación de la cuenta es una solicitud.
 
 **Para el cliente (`/cuenta`).**
 
@@ -496,3 +496,23 @@ Cuentas para que el cliente vea sus pedidos y citas y no escriba sus datos cada 
 **Además:** la auditoría pasa a 25 registros por página, como el resto del panel.
 
 **Probado contra PostgreSQL 16 local en el navegador:** registro, cita y pedido prellenados y ligados, mis pedidos y citas, cancelar cita, cliente en `/admin` va a `/cuenta`, editar perfil, contraseña incorrecta, eliminar con pedido en curso rechazado, salir, correo repetido, volver a `/pedido` tras ingresar; en el panel, la administradora ve Clientes, restablece la contraseña, el cliente queda obligado a cambiarla, la clínica cancela el pedido y el cliente elimina su cuenta con todos sus datos anonimizados; Actions cruzadas entre zonas rechazadas.
+
+## 20. Ajustes al portal (decisión del usuario)
+
+| Antes | Ahora | Por qué |
+| :-- | :-- | :-- |
+| Se podía pedir sin cuenta | **Pedir exige cuenta de cliente** | Que la base se alimente de clientes identificados, con su historial |
+| El cliente cancelaba sus citas en `/cuenta` | **Botón "¿Cancelar o cambiar? Escríbenos"** que abre WhatsApp con el mensaje escrito ("Hola, soy …. Necesito cancelar o cambiar la cita CIT-… de …") | La administradora acomoda la agenda; todo se habla por WhatsApp |
+| El cliente eliminaba su cuenta | **Solicitud de eliminación** que la clínica atiende | Revisar antes (pedidos en curso) y dejar constancia |
+
+**Pedidos.** En `/pedido` el carrito se ve sin sesión, pero para enviarlo aparecen **Ingresar** y **Crear cuenta** (vuelven a `/pedido` con el carrito intacto). Con sesión, nombre, celular y correo salen de la cuenta (se ven, con el enlace "Actualízalos en tu perfil") y el formulario solo pide notas y, si aplica, la fórmula. La autorización de datos se dio al crear la cuenta. La Action `pedidos.crear` responde 401 sin sesión de cliente; un usuario del panel ve que debe usar una cuenta de cliente. Las **citas siguen sin exigir cuenta**.
+
+**Citas.** Fuera el permiso `cuenta:cancelar_cita`, la Action y, en la base, la política RLS y el `UPDATE` de `vitalis_cuenta` sobre `solicitudes_cita` (migración `0013`): el portal ya no puede cambiar una cita ni por error.
+
+**Eliminar la cuenta.**
+
+- En **Mi perfil**, el cliente marca una casilla y envía la solicitud (`usuarios.eliminacion_solicitada_en`, migración `0012`). Ve la fecha, el plazo (máximo 15 días hábiles, Ley 1581) y puede **retirarla**. Queda en la auditoría (`eliminacion_solicitada`, con `retirada: true` al retirarla).
+- En el panel, **Clientes** tiene la pestaña **Solicitudes de eliminación (N)**, cada cliente muestra "Pidió eliminar su cuenta el …" y el resumen avisa cuántas hay. La administradora las ve; **solo el superadmin ejecuta "Eliminar cuenta"**, como el resto de eliminaciones, y no se puede con pedidos en curso (primero se entregan o cancelan). La función de la base anonimiza todo y borra la marca de la solicitud.
+- El permiso `cuenta:eliminar` pasa a significar "Solicitar la eliminación de su cuenta".
+
+**Probado en el navegador:** carrito sin cuenta y Action en 401, crear cuenta desde el pedido y volver con el carrito, pedido con los datos de la cuenta, cita sin botón de cancelar y con el enlace de WhatsApp, Action de cancelar inexistente (404), solicitar, retirar y volver a solicitar la eliminación, la administradora la ve pero recibe 403 al ejecutarla, el superadmin la rechaza con pedido en curso y la ejecuta tras cancelarlo, y el cliente queda fuera con sus datos anonimizados.

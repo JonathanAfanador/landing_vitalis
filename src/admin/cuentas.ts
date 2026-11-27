@@ -1,7 +1,7 @@
 import { and, count, eq, gt, sql } from 'drizzle-orm';
 import { dbAdmin } from '../db/client-admin';
 import { auditoria, roles, usuarios } from '../db/schema';
-import { hashClave, verificarClave } from '../lib/clave';
+import { hashClave } from '../lib/clave';
 
 // Identidad de las cuentas de clientes (registro, contraseña y supresión). Usa la conexión del panel porque
 // toca usuarios, sesiones y auditoría, igual que el login. Los datos del portal se leen con vitalis_cuenta.
@@ -59,14 +59,6 @@ export async function cuentasRecientesPorIp(ipHash: string) {
       ),
     );
   return fila?.total ?? 0;
-}
-
-export async function claveCorrecta(usuarioId: number, clave: string) {
-  const [fila] = await dbAdmin
-    .select({ claveHash: usuarios.claveHash })
-    .from(usuarios)
-    .where(eq(usuarios.id, usuarioId));
-  return Boolean(fila) && (await verificarClave(clave, fila?.claveHash ?? '')).valida;
 }
 
 // Derecho de supresión: lo hace una función de la base con permisos de dueño (ver la migración 0011).

@@ -1,7 +1,6 @@
-import { and, count, desc, eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { comoCuenta } from '../db/client-cuenta';
 import { especies, medicamentos, pedidoItems, pedidos, solicitudesCita, usuarios } from '../db/schema';
-import { origenesCita } from '../lib/estados';
 
 // Datos del portal de clientes. Todo pasa por comoCuenta(): las políticas RLS de la base solo devuelven filas
 // de esa cuenta. El WHERE por usuario_id se repite aquí a propósito: dos barreras en lugar de una.
@@ -16,6 +15,7 @@ export const miPerfil = (usuarioId: number) =>
         email: usuarios.email,
         telefono: usuarios.telefono,
         desde: usuarios.createdAt,
+        eliminacionSolicitadaEn: usuarios.eliminacionSolicitadaEn,
       })
       .from(usuarios)
       .where(eq(usuarios.id, usuarioId));
@@ -83,32 +83,13 @@ export const misCitas = (usuarioId: number) =>
       .limit(MAX_RECIENTES),
   );
 
-// Solo si sigue por agendar o agendada. La política de la base además exige que el estado nuevo sea "cancelada".
-export const cancelarMiCita = (usuarioId: number, citaId: number) =>
+// Solicitud de eliminación (Ley 1581): el cliente la marca o la retira; la clínica la atiende desde el panel.
+export const marcarSolicitudEliminacion = (usuarioId: number, solicitar: boolean) =>
   comoCuenta(usuarioId, async (tx) => {
     const [fila] = await tx
-      .update(solicitudesCita)
-      .set({ estado: 'cancelada' })
-      .where(
-        and(
-          eq(solicitudesCita.id, citaId),
-          eq(solicitudesCita.usuarioId, usuarioId),
-          inArray(solicitudesCita.estado, origenesCita('cancelada')),
-        ),
-      )
-      .returning({ id: solicitudesCita.id });
+      .update(usuarios)
+      .set({ eliminacionSolicitadaEn: solicitar ? new Date() : null })
+      .where(eq(usuarios.id, usuarioId))
+      .returning({ id: usuarios.id });
     return Boolean(fila);
-  });
-
-// Pedidos que la clínica aún está atendiendo: mientras existan, la cuenta no se elimina (se perdería el
-// contacto para entregarlos o devolver el dinero).
-export const pedidosEnCurso = (usuarioId: number) =>
-  comoCuenta(usuarioId, async (tx) => {
-    const [fila] = await tx
-      .select({ total: count() })
-      .from(pedidos)
-      .where(
-        and(eq(pedidos.usuarioId, usuarioId), inArray(pedidos.estado, ['pendiente', 'confirmado', 'pagado'])),
-      );
-    return fila?.total ?? 0;
   });

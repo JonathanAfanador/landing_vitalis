@@ -175,13 +175,6 @@ export const PERMISOS = {
     descripcion: 'Ver en /cuenta las citas pedidas con su cuenta y su estado.',
     porDefecto: CLIENTE,
   },
-  'cuenta:cancelar_cita': {
-    modulo: 'cuenta',
-    nombre: 'Cancelar sus citas',
-    descripcion: 'Cancelar sus citas por agendar o agendadas.',
-    requiere: ['cuenta:ver_citas'],
-    porDefecto: CLIENTE,
-  },
   'cuenta:editar_perfil': {
     modulo: 'cuenta',
     nombre: 'Editar su perfil',
@@ -190,8 +183,9 @@ export const PERMISOS = {
   },
   'cuenta:eliminar': {
     modulo: 'cuenta',
-    nombre: 'Eliminar su cuenta',
-    descripcion: 'Borrar su cuenta y sus datos personales (derecho de supresión, Ley 1581).',
+    nombre: 'Solicitar la eliminación de su cuenta',
+    descripcion:
+      'Pedir que la clínica borre su cuenta y sus datos personales (derecho de supresión, Ley 1581).',
     porDefecto: CLIENTE,
   },
 } as const satisfies Record<string, DefPermiso>;

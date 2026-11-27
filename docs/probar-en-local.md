@@ -91,7 +91,7 @@ Para empezar basta con `DATABASE_URL_MIGRACIONES`; las demás se completan en el
    pnpm db:migrate
    ```
 
-   Debe terminar con "Permisos sincronizados: 24 en el catálogo".
+   Debe terminar con "Permisos sincronizados: 23 en el catálogo".
 
 2. **Genera cuatro textos aleatorios:** tres contraseñas y la sal. Ejecuta este comando cuatro veces y guarda cada resultado:
 

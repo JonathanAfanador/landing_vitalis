@@ -32,11 +32,6 @@ const registro =
 
     <div class="mt-6 flex flex-col gap-3">
       {params.has('salio') && <Aviso tipo="exito">Cerraste sesión.</Aviso>}
-      {params.has('eliminada') && (
-        <Aviso tipo="exito">
-          Eliminamos tu cuenta y tus datos personales. Gracias por confiar en Vitalis.
-        </Aviso>
-      )}
       {ingreso?.error && <Aviso tipo="error">{ingreso.error.message}</Aviso>}
     </div>
 

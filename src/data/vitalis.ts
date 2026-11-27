@@ -142,7 +142,10 @@ export const especies = [
 
 export const comoPedir = [
   { titulo: 'Busca', texto: 'Encuentra el medicamento por nombre, especie o categoría.' },
-  { titulo: 'Agrégalo y deja tus datos', texto: 'Elige la cantidad y déjanos tu nombre y tu celular.' },
+  {
+    titulo: 'Agrégalo y envía tu pedido',
+    texto: 'Elige la cantidad y envíalo con tu cuenta. Si es tu primera vez, créala en un minuto.',
+  },
   {
     titulo: 'Confirma, paga y recoge',
     texto:

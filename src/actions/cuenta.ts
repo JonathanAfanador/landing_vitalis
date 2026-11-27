@@ -2,17 +2,11 @@ import { ActionError, defineAction, type ActionAPIContext } from 'astro:actions'
 import { z } from 'astro/zod';
 import { registrar } from '../admin/auditoria';
 import { can, esCliente, type UsuarioSesion } from '../admin/autorizacion';
-import {
-  claveCorrecta,
-  CorreoEnUso,
-  crearCuentaCliente,
-  cuentasRecientesPorIp,
-  eliminarCuentaCliente,
-} from '../admin/cuentas';
+import { CorreoEnUso, crearCuentaCliente, cuentasRecientesPorIp } from '../admin/cuentas';
 import { cambiarClavePropia, intentarLogin } from '../admin/login';
 import type { CodigoPermiso } from '../admin/permisos';
 import { COOKIE_SESION, cerrarSesion, crearSesion } from '../admin/sesiones';
-import { actualizarMiPerfil, cancelarMiCita, pedidosEnCurso } from '../cuenta/datos';
+import { actualizarMiPerfil, marcarSolicitudEliminacion } from '../cuenta/datos';
 import { protegerErrores } from '../lib/acciones';
 import { CLAVE_MAX, validarClaveNueva } from '../lib/clave';
 import { hashIp } from '../lib/ip';
@@ -120,54 +114,35 @@ export const cuenta = {
     }),
   }),
 
-  cancelarCita: defineAction({
+  // Derecho de supresión (Ley 1581): el cliente lo solicita y la clínica lo atiende desde el panel (lo ejecuta
+  // el superadmin, revisando antes que no queden pedidos en curso). Se puede retirar mientras tanto.
+  solicitarEliminacion: defineAction({
     accept: 'form',
-    input: z.object({ citaId: z.coerce.number().int().positive() }),
-    handler: protegerErrores(async ({ citaId }, ctx) => {
-      const usuario = requerirCliente(ctx.locals.usuario, 'cuenta:cancelar_cita');
-      if (!(await cancelarMiCita(usuario.id, citaId))) {
-        throw new ActionError({
-          code: 'CONFLICT',
-          message: 'Esa cita ya no se puede cancelar. Recarga para ver su estado.',
-        });
-      }
+    input: z.object({ entiendo: z.boolean().refine((v) => v, 'Marca la casilla para confirmar.') }),
+    handler: protegerErrores(async (_datos, ctx) => {
+      const usuario = requerirCliente(ctx.locals.usuario, 'cuenta:eliminar');
+      await marcarSolicitudEliminacion(usuario.id, true);
       await registrar({
         actorId: usuario.id,
-        evento: 'cita_estado_cambiado',
-        entidad: 'cita',
-        entidadId: citaId,
-        detalle: { a: 'cancelada', por: 'cliente' },
+        evento: 'eliminacion_solicitada',
+        entidad: 'usuario',
+        entidadId: usuario.id,
       });
       return { ok: true };
     }),
   }),
 
-  // Derecho de supresión (Ley 1581): pide la contraseña y que no haya pedidos en curso.
-  eliminar: defineAction({
+  retirarSolicitudEliminacion: defineAction({
     accept: 'form',
-    input: z.object({
-      clave: clave('Escribe tu contraseña para confirmar.'),
-      entiendo: z.boolean().refine((v) => v, 'Marca la casilla para confirmar.'),
-    }),
-    handler: protegerErrores(async ({ clave }, ctx) => {
+    handler: protegerErrores(async (_: unknown, ctx: ActionAPIContext) => {
       const usuario = requerirCliente(ctx.locals.usuario, 'cuenta:eliminar');
-      if (!(await claveCorrecta(usuario.id, clave))) {
-        throw new ActionError({ code: 'BAD_REQUEST', message: 'La contraseña no es correcta.' });
-      }
-      if ((await pedidosEnCurso(usuario.id)) > 0) {
-        throw new ActionError({
-          code: 'CONFLICT',
-          message:
-            'Tienes pedidos en curso. Cuando los recojas, o si la clínica los cancela, podrás eliminar tu cuenta.',
-        });
-      }
-      await eliminarCuentaCliente(usuario.id);
-      ctx.cookies.delete(COOKIE_SESION, { path: '/' });
+      await marcarSolicitudEliminacion(usuario.id, false);
       await registrar({
         actorId: usuario.id,
-        evento: 'cuenta_eliminada',
+        evento: 'eliminacion_solicitada',
         entidad: 'usuario',
         entidadId: usuario.id,
+        detalle: { retirada: true },
       });
       return { ok: true };
     }),

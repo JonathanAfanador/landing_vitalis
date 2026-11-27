@@ -83,8 +83,20 @@ export const server = {
       accept: 'form',
       input: datosPedidoSchema,
       handler: protegerErrores(async (datos, ctx) => {
-        if (datos.sitioWeb)
-          throw new ActionError({ code: 'BAD_REQUEST', message: 'No se pudo enviar el pedido.' });
+        // Pedir exige cuenta de cliente: así cada pedido queda con un cliente identificado y su historial.
+        const usuario = ctx.locals.usuario;
+        if (!usuario || !esCliente(usuario)) {
+          throw new ActionError({
+            code: 'UNAUTHORIZED',
+            message: 'Ingresa o crea tu cuenta para enviar el pedido.',
+          });
+        }
+        if (!usuario.telefono) {
+          throw new ActionError({
+            code: 'BAD_REQUEST',
+            message: 'Agrega tu celular en Mi perfil para que podamos confirmarte el pedido.',
+          });
+        }
         const items = leerCarrito(ctx.cookies);
         if (!items.length) throw new ActionError({ code: 'BAD_REQUEST', message: 'Tu pedido está vacío.' });
 
@@ -97,19 +109,19 @@ export const server = {
         }
 
         try {
-          // Con sesión de cliente, el pedido queda en su cuenta (lo ve en /cuenta).
           const pedido = await crearPedido(
             {
-              nombre: datos.nombre,
-              telefono: datos.telefono,
-              email: datos.email ?? null,
+              nombre: usuario.nombre,
+              telefono: usuario.telefono,
+              email: usuario.email,
               notas: datos.notas || null,
               declaraFormula: datos.declaraFormula,
-              aceptaDatos: datos.aceptaDatos,
+              // La autorización de datos la dio al crear la cuenta (queda la fecha en usuarios).
+              aceptaDatos: true,
               items,
             },
             ipHash,
-            cuentaDe(ctx.locals.usuario),
+            usuario.id,
           );
           vaciarCarrito(ctx.cookies);
           return pedido;

@@ -28,15 +28,11 @@ const errorGeneral =
   (envio?.error && !isInputError(envio.error) ? envio.error.message : null) ?? cambio?.error?.message;
 // Si el envío falló, se vuelven a rellenar los campos con lo que se escribió.
 const enviado = envio?.error ? await Astro.request.formData() : null;
-// Con sesión de cliente, el formulario viene prellenado y lo enviado queda en su cuenta.
+// Pedir exige cuenta de cliente: sus datos salen de la cuenta. Sin sesión se ve el carrito y se invita a
+// ingresar o registrarse (el carrito sigue en su cookie y vuelve aquí).
 const cliente = Astro.locals.usuario?.rolSlug === 'usuario' ? Astro.locals.usuario : null;
-const DE_LA_CUENTA: Record<string, string | null | undefined> = {
-  nombre: cliente?.nombre,
-  telefono: cliente?.telefono && formatoTelefono(cliente.telefono),
-  email: cliente?.email,
-};
-const valor = (campo: string) =>
-  (enviado ? String(enviado.get(campo) ?? '') : (DE_LA_CUENTA[campo] ?? '')) || undefined;
+const delPanel = Boolean(Astro.locals.usuario && !cliente);
+const valor = (campo: string) => String(enviado?.get(campo) ?? '') || undefined;
 const primerError = (campo: keyof typeof errores) => errores[campo]?.[0];
 
 const items = pedido ? [] : leerCarrito(Astro.cookies);
@@ -210,134 +206,95 @@ const filas = calculo
 
         <section aria-labelledby="titulo-datos" class="rounded-3xl bg-arena-100 p-6">
           <h2 id="titulo-datos" class="heading-5">
-            Tus datos
+            {cliente ? 'Tus datos' : 'Para enviar tu pedido'}
           </h2>
-          <form method="POST" action={actions.pedidos.crear} class="mt-6 flex flex-col gap-4">
-            <Campo
-              name="nombre"
-              etiqueta="Nombre"
-              autocomplete="name"
-              required
-              minlength={2}
-              maxlength={80}
-              value={valor('nombre')}
-              error={primerError('nombre')}
-            />
-            <Campo
-              name="telefono"
-              etiqueta="Celular o WhatsApp"
-              type="tel"
-              inputmode="tel"
-              autocomplete="tel-national"
-              required
-              maxlength={20}
-              ayuda="10 dígitos, por ejemplo 300 123 4567."
-              value={valor('telefono')}
-              error={primerError('telefono')}
-            />
-            <Campo
-              name="email"
-              etiqueta="Correo"
-              type="email"
-              autocomplete="email"
-              maxlength={120}
-              value={valor('email')}
-              error={primerError('email')}
-            />
-            <Campo
-              name="notas"
-              etiqueta="Notas"
-              multilinea
-              maxlength={500}
-              value={valor('notas')}
-              error={primerError('notas')}
-            />
+          {cliente ? (
+            <form method="POST" action={actions.pedidos.crear} class="mt-6 flex flex-col gap-4">
+              <dl class="body-6 flex flex-col gap-2 rounded-2xl bg-crema-50 p-4">
+                <div>
+                  <dt class="text-tinta-600">Nombre</dt>
+                  <dd>{cliente.nombre}</dd>
+                </div>
+                <div>
+                  <dt class="text-tinta-600">Celular</dt>
+                  <dd>
+                    {cliente.telefono ? formatoTelefono(cliente.telefono) : 'Falta: agrégalo en tu perfil'}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-tinta-600">Correo</dt>
+                  <dd>{cliente.email}</dd>
+                </div>
+                <a href="/cuenta/perfil" class="caption-5 mt-1 underline underline-offset-4">
+                  ¿Cambiaron? Actualízalos en tu perfil
+                </a>
+              </dl>
+              <Campo
+                name="notas"
+                etiqueta="Notas"
+                multilinea
+                maxlength={500}
+                value={valor('notas')}
+                error={primerError('notas')}
+              />
 
-            {calculo.requiereFormula && (
-              <div class="rounded-2xl bg-crema-50 p-4">
-                <p class="body-6 flex gap-2">
-                  <Icono nombre="prescription" class="size-5 shrink-0 text-dorado-700" />
-                  Tu pedido incluye medicamentos que requieren fórmula médica veterinaria.
-                </p>
-                <label class="body-6 mt-3 flex gap-3">
-                  <input
-                    type="checkbox"
-                    name="declaraFormula"
-                    required
-                    checked={enviado?.has('declaraFormula')}
-                    class="mt-0.5 size-5 shrink-0 accent-azul-900"
-                  />
-                  Tengo la fórmula y la enviaré por WhatsApp.
-                </label>
-              </div>
-            )}
-
-            <div>
-              <label class="body-6 flex gap-3">
-                <input
-                  type="checkbox"
-                  name="aceptaDatos"
-                  required
-                  checked={enviado?.has('aceptaDatos')}
-                  aria-invalid={primerError('aceptaDatos') ? 'true' : undefined}
-                  aria-describedby="error-acepta-datos"
-                  class="mt-0.5 size-5 shrink-0 accent-azul-900"
-                />
-                <span>
-                  Autorizo el tratamiento de mis datos según la{' '}
-                  <a
-                    href="/politica-de-datos"
-                    target="_blank"
-                    class="underline decoration-dorado-400 underline-offset-4"
-                  >
-                    política de tratamiento de datos
-                  </a>
-                  .
-                </span>
-              </label>
-              <p id="error-acepta-datos" class="body-6 mt-1 text-error-700">
-                {primerError('aceptaDatos')}
-              </p>
-            </div>
-
-            <div class="absolute -left-full" aria-hidden="true">
-              <label>
-                No llenes este campo <input type="text" name="sitioWeb" tabindex="-1" autocomplete="off" />
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              class="btn-principal w-full disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={calculo.problemas.length > 0}
-            >
-              Enviar pedido
-            </button>
-            <p class="caption-5 text-center text-tinta-600">
-              {cliente ? (
-                <>
-                  Quedará guardado en{' '}
-                  <a href="/cuenta" class="underline underline-offset-4">
-                    tu cuenta
-                  </a>
-                  .
-                </>
-              ) : (
-                <>
-                  ¿Tienes cuenta?{' '}
-                  <a href="/cuenta/ingresar?volver=/pedido" class="underline underline-offset-4">
-                    Ingresa
-                  </a>{' '}
-                  para guardarlo en tu historial y no escribir tus datos.
-                </>
+              {calculo.requiereFormula && (
+                <div class="rounded-2xl bg-crema-50 p-4">
+                  <p class="body-6 flex gap-2">
+                    <Icono nombre="prescription" class="size-5 shrink-0 text-dorado-700" />
+                    Tu pedido incluye medicamentos que requieren fórmula médica veterinaria.
+                  </p>
+                  <label class="body-6 mt-3 flex gap-3">
+                    <input
+                      type="checkbox"
+                      name="declaraFormula"
+                      required
+                      checked={enviado?.has('declaraFormula')}
+                      class="mt-0.5 size-5 shrink-0 accent-azul-900"
+                    />
+                    Tengo la fórmula y la enviaré por WhatsApp.
+                  </label>
+                </div>
               )}
-            </p>
-            {calculo.problemas.length > 0 && (
-              <p class="body-6 text-error-700">
-                Ajusta los medicamentos marcados en rojo para poder enviar el pedido.
+
+              <button
+                type="submit"
+                class="btn-principal w-full disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={calculo.problemas.length > 0}
+              >
+                Enviar pedido
+              </button>
+              <p class="caption-5 text-center text-tinta-600">
+                Quedará guardado en{' '}
+                <a href="/cuenta" class="underline underline-offset-4">
+                  tu cuenta
+                </a>
+                .
               </p>
-            )}
-          </form>
+              {calculo.problemas.length > 0 && (
+                <p class="body-6 text-error-700">
+                  Ajusta los medicamentos marcados en rojo para poder enviar el pedido.
+                </p>
+              )}
+            </form>
+          ) : delPanel ? (
+            <p class="body-3 mt-4">
+              Ingresaste con una cuenta del panel. Para hacer un pedido, usa una cuenta de cliente.
+            </p>
+          ) : (
+            <div class="mt-4 flex flex-col gap-4">
+              <p class="body-3 text-tinta-600">
+                Ingresa o crea tu cuenta: así no escribes tus datos cada vez y ves el estado de tus pedidos.
+                Tu carrito te espera aquí.
+              </p>
+              <a href="/cuenta/ingresar?volver=/pedido" class="btn-principal w-full">
+                Ingresar
+              </a>
+              <a href="/cuenta/registro?volver=/pedido" class="btn-borde w-full">
+                Crear cuenta
+              </a>
+            </div>
+          )}
         </section>
       </div>
     )}

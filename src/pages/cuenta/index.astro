@@ -1,13 +1,12 @@
 ---
-import { actions } from 'astro:actions';
 import CuentaLayout from '../../layouts/CuentaLayout.astro';
-import Aviso from '../../components/ui/Aviso.astro';
 import Icono from '../../components/ui/Icono.astro';
 import { can, esCliente, puedeEntrarAlPanel } from '../../admin/autorizacion';
 import { misCitas, misPedidos } from '../../cuenta/datos';
+import { contacto } from '../../data/vitalis';
 import { NOMBRE_ESTADO_CITA, NOMBRE_ESTADO_PEDIDO, origenesCita, type EstadoPedido } from '../../lib/estados';
 import { formatoCOP } from '../../lib/formato';
-import { preferenciaCita } from '../../lib/whatsapp';
+import { enlaceWhatsApp, preferenciaCita } from '../../lib/whatsapp';
 
 export const prerender = false;
 
@@ -16,12 +15,8 @@ const usuario = Astro.locals.usuario;
 if (!usuario) return Astro.redirect('/cuenta/ingresar', 303);
 if (!esCliente(usuario)) return Astro.redirect(puedeEntrarAlPanel(usuario) ? '/admin' : '/', 303);
 
-const cancelacion = Astro.getActionResult(actions.cuenta.cancelarCita);
-if (cancelacion?.data) return Astro.redirect('/cuenta?ok=cancelada', 303);
-
 const vePedidos = can(usuario, 'cuenta:ver_pedidos');
 const veCitas = can(usuario, 'cuenta:ver_citas');
-const cancela = can(usuario, 'cuenta:cancelar_cita');
 const [pedidos, citas] = await Promise.all([
   vePedidos ? misPedidos(usuario.id) : [],
   veCitas ? misCitas(usuario.id) : [],
@@ -35,16 +30,17 @@ const EXPLICACION: Record<EstadoPedido, string> = {
   entregado: 'Entregado.',
   cancelado: 'Cancelado.',
 };
-const cancelables: readonly string[] = origenesCita('cancelada');
+// Las citas no se cancelan desde la web: la clínica acomoda la agenda y se habla por WhatsApp.
+const pendientes: readonly string[] = origenesCita('cancelada');
+const escribir = (c: { codigo: string; mascota: string }) =>
+  enlaceWhatsApp(
+    contacto.whatsapp,
+    `Hola, soy ${usuario.nombre}. Necesito cancelar o cambiar la cita ${c.codigo} de ${c.mascota}.`,
+  );
 const etiqueta = 'caption-3 rounded-full bg-arena-100 px-2 py-1';
 ---
 
 <CuentaLayout titulo="Mi cuenta">
-  <div class="flex flex-col gap-3">
-    {Astro.url.searchParams.get('ok') === 'cancelada' && <Aviso tipo="exito">Cancelamos tu cita.</Aviso>}
-    {cancelacion?.error && <Aviso tipo="error">{cancelacion.error.message}</Aviso>}
-  </div>
-
   {vePedidos && (
     <section aria-labelledby="titulo-pedidos">
       <div class="flex flex-wrap items-center justify-between gap-4">
@@ -116,23 +112,16 @@ const etiqueta = 'caption-3 rounded-full bg-arena-100 px-2 py-1';
                   Te escribimos por WhatsApp para acordar el día y la hora.
                 </p>
               )}
-              {cancela && cancelables.includes(c.estado) && (
-                <details class="group mt-4">
-                  <summary class="btn min-h-11 w-fit cursor-pointer list-none border border-error-700/40 px-4 text-sm text-error-700 hover:bg-error-700/10 [&::-webkit-details-marker]:hidden">
-                    Cancelar cita
-                  </summary>
-                  <form
-                    method="POST"
-                    action={actions.cuenta.cancelarCita}
-                    class="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-error-700/5 p-4"
-                  >
-                    <input type="hidden" name="citaId" value={c.id} />
-                    <p class="body-6">¿Seguro que quieres cancelar la cita de {c.mascota}?</p>
-                    <button type="submit" class="btn min-h-10 bg-error-700 px-4 text-sm text-crema-50">
-                      Sí, cancelar
-                    </button>
-                  </form>
-                </details>
+              {pendientes.includes(c.estado) && escribir(c) && (
+                <a
+                  href={escribir(c)}
+                  target="_blank"
+                  rel="noopener"
+                  class="btn-borde mt-4 min-h-10 px-4 text-sm"
+                >
+                  <Icono nombre="whatsapp-logo" class="size-4" />
+                  ¿Cancelar o cambiar? Escríbenos
+                </a>
               )}
             </li>
           ))}

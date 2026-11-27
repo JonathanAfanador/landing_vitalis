@@ -1,8 +1,13 @@
 import { ActionError, defineAction } from 'astro:actions';
 import { z } from 'astro/zod';
 import { registrar } from '../../admin/auditoria';
-import { cambiarEstadoCliente, restablecerClaveCliente } from '../../admin/clientes';
+import {
+  cambiarEstadoCliente,
+  eliminarCuentaDesdePanel,
+  restablecerClaveCliente,
+} from '../../admin/clientes';
 import { requerirPermiso } from '../../admin/guard';
+import { ELIMINAR_REGISTROS } from '../../admin/permisos';
 import { protegerErrores } from '../../lib/acciones';
 
 const usuarioId = z.coerce.number().int().positive();
@@ -37,6 +42,30 @@ export const clientesAdmin = {
       await registrar({
         actorId: actor.id,
         evento: activo ? 'usuario_reactivado' : 'usuario_desactivado',
+        entidad: 'usuario',
+        entidadId: usuarioId,
+      });
+      return { ok: true };
+    }),
+  }),
+
+  // Atender una solicitud de eliminación de cuenta: solo el superadmin, como el resto de eliminaciones.
+  eliminar: defineAction({
+    accept: 'form',
+    input: z.object({ usuarioId }),
+    handler: protegerErrores(async ({ usuarioId }, ctx) => {
+      const actor = requerirPermiso(ctx.locals.usuario, ELIMINAR_REGISTROS);
+      const resultado = await eliminarCuentaDesdePanel(usuarioId);
+      if (resultado === 'no-es-cliente') throw new ActionError({ code: 'CONFLICT', message: NO_ES_CLIENTE });
+      if (resultado === 'pedidos-en-curso') {
+        throw new ActionError({
+          code: 'CONFLICT',
+          message: 'Tiene pedidos en curso. Entrégalos o cancélalos antes de eliminar la cuenta.',
+        });
+      }
+      await registrar({
+        actorId: actor.id,
+        evento: 'cuenta_eliminada',
         entidad: 'usuario',
         entidadId: usuarioId,
       });

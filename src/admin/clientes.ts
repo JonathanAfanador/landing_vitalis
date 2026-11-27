@@ -1,16 +1,18 @@
-import { and, count, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, inArray, isNotNull, or, sql } from 'drizzle-orm';
 import { dbAdmin } from '../db/client-admin';
 import { pedidos, roles, solicitudesCita, usuarios } from '../db/schema';
 import { generarClaveTemporal, hashClave } from '../lib/clave';
+import { eliminarCuentaCliente } from './cuentas';
 import { cerrarTodasLasSesiones } from './sesiones';
 import { desplazamiento, POR_PAGINA } from './paginacion';
 
 // Cuentas de clientes del portal, para que la clínica restablezca contraseñas o desactive cuentas.
 // Búsqueda por nombre, correo o celular; las más recientes primero.
-export async function listarClientesPanel(filtros: { q: string; pagina: number }) {
+export async function listarClientesPanel(filtros: { q: string; pagina: number; solicitudes: boolean }) {
   const patron = filtros.q ? `%${filtros.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
   const donde = and(
     eq(roles.slug, 'usuario'),
+    filtros.solicitudes ? isNotNull(usuarios.eliminacionSolicitadaEn) : undefined,
     patron
       ? or(ilike(usuarios.nombre, patron), ilike(usuarios.email, patron), ilike(usuarios.telefono, patron))
       : undefined,
@@ -24,6 +26,7 @@ export async function listarClientesPanel(filtros: { q: string; pagina: number }
         telefono: usuarios.telefono,
         activo: usuarios.activo,
         debeCambiarClave: usuarios.debeCambiarClave,
+        eliminacionSolicitadaEn: usuarios.eliminacionSolicitadaEn,
         desde: usuarios.createdAt,
         ultimoAcceso: usuarios.ultimoAcceso,
         pedidos: sql<number>`(select count(*)::int from ${pedidos} where ${pedidos.usuarioId} = ${usuarios.id})`,
@@ -73,4 +76,28 @@ export async function cambiarEstadoCliente(id: number, activo: boolean) {
     .returning({ id: usuarios.id });
   if (fila && !activo) await cerrarTodasLasSesiones(id);
   return Boolean(fila);
+}
+
+export const contarSolicitudesEliminacion = async () => {
+  const [fila] = await dbAdmin
+    .select({ total: count() })
+    .from(usuarios)
+    .where(isNotNull(usuarios.eliminacionSolicitadaEn));
+  return fila?.total ?? 0;
+};
+
+// Atiende la supresión (Ley 1581). No se hace con pedidos en curso: se perdería el contacto para entregarlos
+// o devolver el dinero; primero se entregan o se cancelan.
+export async function eliminarCuentaDesdePanel(
+  id: number,
+): Promise<'ok' | 'no-es-cliente' | 'pedidos-en-curso'> {
+  const [cliente] = await dbAdmin.select({ id: usuarios.id }).from(usuarios).where(esClienteVigente(id));
+  if (!cliente) return 'no-es-cliente';
+  const [enCurso] = await dbAdmin
+    .select({ total: count() })
+    .from(pedidos)
+    .where(and(eq(pedidos.usuarioId, id), inArray(pedidos.estado, ['pendiente', 'confirmado', 'pagado'])));
+  if ((enCurso?.total ?? 0) > 0) return 'pedidos-en-curso';
+  await eliminarCuentaCliente(id);
+  return 'ok';
 }

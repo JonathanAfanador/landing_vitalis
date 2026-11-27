@@ -85,6 +85,20 @@
       "when": 1795789022497,
       "tag": "0011_rol_cuenta_y_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1795793798920,
+      "tag": "0012_solicitud_eliminacion",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1795793799626,
+      "tag": "0013_permisos_solicitud_eliminacion",
+      "breakpoints": true
     }
   ]
 }

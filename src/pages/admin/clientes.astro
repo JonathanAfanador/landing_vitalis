@@ -5,10 +5,11 @@ import Aviso from '../../components/ui/Aviso.astro';
 import Paginacion from '../../components/admin/Paginacion.astro';
 import SinPermiso from '../../components/admin/SinPermiso.astro';
 import { can } from '../../admin/autorizacion';
-import { listarClientesPanel } from '../../admin/clientes';
+import { contarSolicitudesEliminacion, listarClientesPanel } from '../../admin/clientes';
 import { esCuentaEliminada } from '../../admin/cuentas';
 import { permisoDePagina } from '../../admin/guard';
 import { leerPagina, totalPaginas } from '../../admin/paginacion';
+import { ELIMINAR_REGISTROS } from '../../admin/permisos';
 import { formatoTelefono } from '../../lib/formato';
 
 export const prerender = false;
@@ -17,6 +18,7 @@ const actor = permisoDePagina(Astro, 'clientes:ver');
 const resultados = {
   estado: Astro.getActionResult(actions.admin.clientes.cambiarEstado),
   clave: Astro.getActionResult(actions.admin.clientes.restablecerClave),
+  eliminar: Astro.getActionResult(actions.admin.clientes.eliminar),
 };
 const errores = Object.values(resultados)
   .map((r) => r?.error)
@@ -27,13 +29,18 @@ const claveTemporal = resultados.clave?.data;
 const params = Astro.url.searchParams;
 const q = params.get('q')?.trim().slice(0, 60) ?? '';
 const pagina = leerPagina(params.get('pagina'));
-const { clientes, total } = actor ? await listarClientesPanel({ q, pagina }) : { clientes: [], total: 0 };
+// ?ver=solicitudes: solo quienes pidieron eliminar su cuenta.
+const solicitudes = params.get('ver') === 'solicitudes';
+const [{ clientes, total }, pendientes] = actor
+  ? await Promise.all([listarClientesPanel({ q, pagina, solicitudes }), contarSolicitudesEliminacion()])
+  : [{ clientes: [], total: 0 }, 0];
 if (actor && pagina > totalPaginas(total)) {
   const url = new URL(Astro.url);
   url.searchParams.set('pagina', String(totalPaginas(total)));
   return Astro.redirect(url.pathname + url.search, 303);
 }
 const gestiona = can(actor, 'clientes:gestionar');
+const superadmin = can(actor, ELIMINAR_REGISTROS);
 const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' });
 ---
 
@@ -53,6 +60,11 @@ const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 
           <Aviso tipo="error">{e}</Aviso>
         ))}
         {resultados.estado?.data && <Aviso tipo="exito">Estado de la cuenta actualizado.</Aviso>}
+        {resultados.eliminar?.data && (
+          <Aviso tipo="exito">
+            Cuenta eliminada: se borraron sus datos personales. Avísale al cliente por WhatsApp.
+          </Aviso>
+        )}
         {claveTemporal && (
           <Aviso tipo="exito">
             Contraseña temporal de <strong>{claveTemporal.email}</strong>:
@@ -64,7 +76,25 @@ const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 
         )}
       </div>
 
-      <form method="GET" class="mt-6 flex flex-wrap gap-2" role="search">
+      <nav aria-label="Filtrar clientes" class="mt-6 flex flex-wrap gap-2">
+        <a
+          href="/admin/clientes"
+          aria-current={solicitudes ? undefined : 'page'}
+          class="btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50"
+        >
+          Todos
+        </a>
+        <a
+          href="/admin/clientes?ver=solicitudes"
+          aria-current={solicitudes ? 'page' : undefined}
+          class="btn-borde min-h-10 border-error-700/40 px-4 text-sm text-error-700 aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50"
+        >
+          Solicitudes de eliminación ({pendientes})
+        </a>
+      </nav>
+
+      <form method="GET" class="mt-4 flex flex-wrap gap-2" role="search">
+        {solicitudes && <input type="hidden" name="ver" value="solicitudes" />}
         <label for="buscar-cliente" class="sr-only">
           Buscar cliente
         </label>
@@ -122,6 +152,11 @@ const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 
                           Desactivada
                         </span>
                       )}
+                      {c.eliminacionSolicitadaEn && (
+                        <span class="caption-3 mt-1 inline-block rounded-full bg-error-700/10 px-2 py-0.5 text-error-700">
+                          Pidió eliminar su cuenta el {fecha.format(c.eliminacionSolicitadaEn)}
+                        </span>
+                      )}
                       {c.debeCambiarClave && c.activo && (
                         <span class="caption-3 mt-1 inline-block rounded-full bg-dorado-400/30 px-2 py-0.5">
                           Contraseña temporal
@@ -140,6 +175,21 @@ const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 
                     <td class="block px-4 py-2 md:table-cell md:py-3">
                       {gestiona && !eliminada && (
                         <div class="flex flex-wrap gap-2 md:justify-end">
+                          {superadmin && c.eliminacionSolicitadaEn && (
+                            <form
+                              method="POST"
+                              action={actions.admin.clientes.eliminar}
+                              data-confirmar={`¿Eliminar la cuenta de ${c.nombre}? Se borran su nombre, correo y celular, también de sus pedidos y citas. No se puede deshacer.`}
+                            >
+                              <input type="hidden" name="usuarioId" value={c.id} />
+                              <button
+                                type="submit"
+                                class="btn min-h-10 bg-error-700 px-3 text-sm text-crema-50"
+                              >
+                                Eliminar cuenta
+                              </button>
+                            </form>
+                          )}
                           {c.activo && (
                             <form
                               method="POST"
@@ -186,7 +236,11 @@ const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 
         </div>
       ) : (
         <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
-          {q ? 'No hay clientes que coincidan con la búsqueda.' : 'Todavía nadie ha creado una cuenta.'}
+          {solicitudes
+            ? 'No hay solicitudes de eliminación pendientes.'
+            : q
+              ? 'No hay clientes que coincidan con la búsqueda.'
+              : 'Todavía nadie ha creado una cuenta.'}
         </p>
       )}
       <Paginacion pagina={pagina} total={total} nombre={total === 1 ? 'cliente' : 'clientes'} />

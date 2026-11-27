@@ -15,10 +15,12 @@ if (!esCliente(usuario)) return Astro.redirect(puedeEntrarAlPanel(usuario) ? '/a
 
 const datos = Astro.getActionResult(actions.cuenta.actualizarPerfil);
 const clave = Astro.getActionResult(actions.cuenta.cambiarClave);
-const eliminar = Astro.getActionResult(actions.cuenta.eliminar);
+const solicitud = Astro.getActionResult(actions.cuenta.solicitarEliminacion);
+const retiro = Astro.getActionResult(actions.cuenta.retirarSolicitudEliminacion);
 if (datos?.data) return Astro.redirect('/cuenta/perfil?ok=datos', 303);
 if (clave?.data) return Astro.redirect('/cuenta/perfil?ok=clave', 303);
-if (eliminar?.data) return Astro.redirect('/cuenta/ingresar?eliminada=1', 303);
+if (solicitud?.data) return Astro.redirect('/cuenta/perfil?ok=solicitud', 303);
+if (retiro?.data) return Astro.redirect('/cuenta/perfil?ok=retiro', 303);
 
 const perfil = await miPerfil(usuario.id);
 if (!perfil) return Astro.redirect('/cuenta/ingresar', 303);
@@ -140,35 +142,66 @@ const tarjeta = 'rounded-3xl border border-azul-900/10 p-6';
       <h2 id="titulo-eliminar" class="heading-5 text-error-700">
         Eliminar mi cuenta
       </h2>
-      <p class="body-6 mt-2 max-w-2xl text-tinta-600">
-        Borramos tu nombre, correo y celular de la cuenta y de tus pedidos y citas, y cancelamos las citas que
-        no se hayan atendido. Los pedidos se conservan sin tus datos porque son registro de ventas. No se
-        puede deshacer.
-      </p>
-      {eliminar?.error && (
-        <Aviso tipo="error" class="mt-4">
-          {eliminar.error.message}
+      {ok === 'solicitud' && (
+        <Aviso tipo="exito" class="mt-4">
+          Recibimos tu solicitud. Te escribiremos por WhatsApp cuando la atendamos.
         </Aviso>
       )}
-      <form method="POST" action={actions.cuenta.eliminar} class="mt-6 flex max-w-md flex-col gap-4">
-        <Campo
-          name="clave"
-          etiqueta="Tu contraseña, para confirmar"
-          type="password"
-          autocomplete="current-password"
-          required
-        />
-        <label class="body-6 flex gap-3">
-          <input type="checkbox" name="entiendo" required class="mt-0.5 size-5 shrink-0 accent-error-700" />
-          Entiendo que mi cuenta y mis datos se eliminan para siempre.
-        </label>
-        <button
-          type="submit"
-          class="btn min-h-11 self-start border border-error-700/40 px-4 text-error-700 hover:bg-error-700/10"
-        >
-          Eliminar mi cuenta
-        </button>
-      </form>
+      {ok === 'retiro' && (
+        <Aviso tipo="exito" class="mt-4">
+          Retiraste la solicitud. Tu cuenta sigue activa.
+        </Aviso>
+      )}
+      {[solicitud, retiro].map(
+        (r) =>
+          r?.error && (
+            <Aviso tipo="error" class="mt-4">
+              {r.error.message}
+            </Aviso>
+          ),
+      )}
+      {perfil.eliminacionSolicitadaEn ? (
+        <>
+          <p class="body-6 mt-2 max-w-2xl">
+            Pediste eliminar tu cuenta el {desde.format(perfil.eliminacionSolicitadaEn)}. La clínica la revisa
+            y la elimina en un plazo máximo de 15 días hábiles, como indica la ley. Te avisamos por WhatsApp.
+          </p>
+          <form method="POST" action={actions.cuenta.retirarSolicitudEliminacion} class="mt-6">
+            <button type="submit" class="btn-borde">
+              Retirar la solicitud
+            </button>
+          </form>
+        </>
+      ) : (
+        <>
+          <p class="body-6 mt-2 max-w-2xl text-tinta-600">
+            Si lo pides, la clínica borra tu nombre, correo y celular de la cuenta y de tus pedidos y citas.
+            Antes revisamos que no tengas pedidos en curso. Los pedidos se conservan sin tus datos porque son
+            registro de ventas. No se puede deshacer.
+          </p>
+          <form
+            method="POST"
+            action={actions.cuenta.solicitarEliminacion}
+            class="mt-6 flex max-w-md flex-col gap-4"
+          >
+            <label class="body-6 flex gap-3">
+              <input
+                type="checkbox"
+                name="entiendo"
+                required
+                class="mt-0.5 size-5 shrink-0 accent-error-700"
+              />
+              Quiero que eliminen mi cuenta y mis datos personales.
+            </label>
+            <button
+              type="submit"
+              class="btn min-h-11 self-start border border-error-700/40 px-4 text-error-700 hover:bg-error-700/10"
+            >
+              Solicitar la eliminación
+            </button>
+          </form>
+        </>
+      )}
     </section>
   )}
 </CuentaLayout>

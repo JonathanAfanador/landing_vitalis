@@ -1,42 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { datosPedidoSchema } from '../../src/lib/validacion';
+import { datosPedidoSchema, datosPerfilSchema } from '../../src/lib/validacion';
 
-// Así llegan los datos de un formulario a la Action: los campos vacíos como undefined.
-const valido = {
-  nombre: 'Laura Gómez',
-  telefono: '+57 310 555 1234',
-  declaraFormula: false,
-  aceptaDatos: true,
-};
-
-describe('datosPedidoSchema', () => {
-  it('acepta un pedido válido y normaliza el teléfono', () => {
-    const r = datosPedidoSchema.parse(valido);
-    expect(r.telefono).toBe('3105551234');
-    expect(r.email).toBeUndefined();
+// Así llegan los datos de un formulario a la Action: los campos vacíos como undefined o null.
+describe('datosPedidoSchema (pedir exige cuenta)', () => {
+  it('solo trae notas y la declaración de fórmula: los datos personales salen de la cuenta', () => {
+    expect(Object.keys(datosPedidoSchema.shape).sort()).toEqual(['declaraFormula', 'notas']);
+    const r = datosPedidoSchema.parse({ nombre: 'Intruso', telefono: '3000000000', notas: 'Gracias' });
+    expect(r).toEqual({ notas: 'Gracias', declaraFormula: false });
   });
 
-  it('exige la autorización de la Ley 1581', () => {
-    expect(datosPedidoSchema.safeParse({ ...valido, aceptaDatos: false }).success).toBe(false);
+  it('las notas son opcionales y tienen tope', () => {
+    expect(datosPedidoSchema.safeParse({ notas: null }).success).toBe(true);
+    expect(datosPedidoSchema.safeParse({ notas: 'x'.repeat(501) }).success).toBe(false);
+  });
+});
+
+describe('nombre y celular (perfil y registro)', () => {
+  const valido = { nombre: 'Laura Gómez', telefono: '+57 310 555 1234' };
+
+  it('normaliza el celular con indicativo y espacios', () => {
+    expect(datosPerfilSchema.parse(valido).telefono).toBe('3105551234');
   });
 
   it('rechaza teléfonos que no son colombianos', () => {
-    expect(datosPedidoSchema.safeParse({ ...valido, telefono: '12345' }).success).toBe(false);
-    expect(datosPedidoSchema.safeParse({ ...valido, telefono: '2001234567' }).success).toBe(false);
+    expect(datosPerfilSchema.safeParse({ ...valido, telefono: '12345' }).success).toBe(false);
+    expect(datosPerfilSchema.safeParse({ ...valido, telefono: '2001234567' }).success).toBe(false);
   });
 
-  it('da un mensaje claro cuando falta un campo obligatorio', () => {
-    const r = datosPedidoSchema.safeParse({ ...valido, nombre: null });
+  it('da un mensaje claro cuando falta el nombre', () => {
+    const r = datosPerfilSchema.safeParse({ ...valido, nombre: null });
     expect(r.success).toBe(false);
     expect(r.error?.issues[0]?.message).toBe('Escribe tu nombre.');
-  });
-
-  it('valida el correo solo si se escribe', () => {
-    expect(datosPedidoSchema.safeParse({ ...valido, email: null }).success).toBe(true);
-    expect(datosPedidoSchema.safeParse({ ...valido, email: 'laura@correo' }).success).toBe(false);
-  });
-
-  it('rechaza el envío si el campo trampa trae texto', () => {
-    expect(datosPedidoSchema.safeParse({ ...valido, sitioWeb: 'http://spam' }).success).toBe(false);
   });
 });
