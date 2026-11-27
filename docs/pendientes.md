@@ -13,8 +13,9 @@ Lo que se decidió dejar para después. Se repasa al cerrar cada entrega.
 | Fotos de los medicamentos | Fase 4 | Almacenamiento de archivos |
 | Limpiar datos de prueba antes de publicar | Pruebas en la base de Neon | Borrar medicamentos `[DEMO]`, pedidos, citas y usuarios de prueba (se dará un script) |
 | Pasarela de pagos en línea (Wompi, Mercado Pago, ePayco) | Fase 4, hoy se paga por transferencia | Registro del negocio en la pasarela e integración con avisos de pago |
+| Cambiar el WhatsApp provisional por el de la clínica | Fase 4C, se usa un número personal para probar | Poner el número real en `contacto.whatsapp` de `src/data/vitalis.ts` antes de publicar |
 | Devoluciones de pedidos ya pagados | Fase 4 | Definir el proceso; hoy un pedido pagado no se cancela desde el panel |
 
 ## Datos del negocio que faltan
 
-Dirección y coordenadas, WhatsApp, teléfono, correo, Instagram y Facebook, horario y urgencias, nombre, formación y tarjeta profesional del doctor, lista de procedimientos,  testimonios reales, enlace de Google Maps, datos del responsable para la política de datos (razón social, NIT) y dominio definitivo.
+Dirección y coordenadas, WhatsApp de la clínica (hoy hay uno provisional), teléfono, correo, Instagram y Facebook, horario y urgencias, nombre, formación y tarjeta profesional del doctor, lista de procedimientos,  testimonios reales, enlace de Google Maps, datos del responsable para la política de datos (razón social, NIT) y dominio definitivo.

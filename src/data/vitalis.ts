@@ -17,7 +17,8 @@ export const negocio = {
 };
 
 export const contacto = {
-  whatsapp: null as string | null, // Solo dígitos con indicativo, p. ej. 573001234567
+  // PROVISIONAL: número personal para pruebas hasta tener el de la clínica. Solo dígitos con indicativo.
+  whatsapp: '573106696497' as string | null,
   telefono: null as string | null,
   correo: null as string | null,
   instagram: null as string | null,
