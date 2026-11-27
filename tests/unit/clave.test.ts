@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { generarClaveTemporal, hashClave, validarClaveNueva, verificarClave } from '../../src/lib/clave';
+import {
+  generarClaveTemporal,
+  generarCodigoRecuperacion,
+  hashClave,
+  normalizarCodigoRecuperacion,
+  validarClaveNueva,
+  verificarClave,
+} from '../../src/lib/clave';
 
 describe('hashClave y verificarClave', () => {
   it('verifica la contraseña correcta y rechaza las demás', async () => {
@@ -50,5 +57,34 @@ describe('validarClaveNueva', () => {
 
   it('las contraseñas temporales cumplen la política', () => {
     for (let i = 0; i < 20; i++) expect(validarClaveNueva(generarClaveTemporal(), 'a@b.co')).toBeNull();
+  });
+});
+
+describe('código de recuperación', () => {
+  it('tiene 16 símbolos sin I, O, 0 ni 1, en grupos de 4', () => {
+    for (let i = 0; i < 100; i++) {
+      expect(generarCodigoRecuperacion()).toMatch(/^[A-HJ-NP-Z2-9]{4}(-[A-HJ-NP-Z2-9]{4}){3}$/);
+    }
+  });
+
+  it('acepta el código escrito en minúsculas, con espacios o sin guiones', () => {
+    const codigo = 'K7QM-3HXP-9WTR-B2NA';
+    for (const escrito of [
+      'k7qm-3hxp-9wtr-b2na',
+      'K7QM 3HXP 9WTR B2NA',
+      'K7QM3HXP9WTRB2NA',
+      ' k7qm3hxp-9wtrb2na ',
+    ]) {
+      expect(normalizarCodigoRecuperacion(escrito)).toBe(codigo);
+    }
+  });
+
+  it('se verifica con scrypt como una contraseña', async () => {
+    const codigo = generarCodigoRecuperacion();
+    const hash = await hashClave(codigo);
+    expect((await verificarClave(normalizarCodigoRecuperacion(codigo.toLowerCase()), hash)).valida).toBe(
+      true,
+    );
+    expect((await verificarClave(generarCodigoRecuperacion(), hash)).valida).toBe(false);
   });
 });

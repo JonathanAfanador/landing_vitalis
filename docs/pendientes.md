@@ -7,7 +7,7 @@ Lo que se decidió dejar para después. Se repasa al cerrar cada entrega.
 | Pendiente | Origen | Qué hace falta |
 | :-- | :-- | :-- |
 | Aviso al cliente al confirmar pedido o cita | Fase 4, decisión del usuario | Botón de WhatsApp desde el panel (gratis) o envío automático (API de WhatsApp Business o correo) |
-| Verificación de correo y "olvidé mi contraseña" en el portal de clientes | Fase 4 (4D) | Dominio propio y un servicio de correo (por ejemplo Resend, plan gratuito) |
+| Verificación de correo y recuperación de contraseña por correo en el portal (hoy: código de recuperación) | Fase 4 (4D) | Dominio propio y un servicio de correo (por ejemplo Resend, plan gratuito). Entonces el enlace por correo reemplaza o complementa el código |
 | Cancelar automáticamente pedidos que no se recogen | Fase 4 | Definir cuántos días se guarda un pedido |
 | Fotos de los medicamentos | Fase 4 | Almacenamiento de archivos |
 | Limpiar datos de prueba antes de publicar | Pruebas en la base de Neon | Borrar medicamentos `[DEMO]`, pedidos, citas y usuarios de prueba (se dará un script) |

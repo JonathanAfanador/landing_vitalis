@@ -475,7 +475,7 @@ Cuentas para que el cliente vea sus pedidos y citas y no escriba sus datos cada 
 - **Mis pedidos:** código, fecha, total, medicamentos, estado y qué sigue ("Te enviamos por WhatsApp los datos para pagar…"). **Mis citas:** mascota, motivo, preferencia, estado y **Cancelar cita** (con confirmación) mientras esté por agendar o agendada.
 - **Perfil:** cambiar nombre y celular (el correo no cambia), cambiar la contraseña (cierra las demás sesiones) y **eliminar la cuenta**.
 - **Eliminar la cuenta (derecho de supresión):** pide la contraseña y una casilla, y no se permite con pedidos en curso (pendiente, confirmado o pagado), para no perder el contacto de un pedido a medias. Una función de la base (`vitalis.eliminar_cuenta_cliente`, con permisos de dueño) borra nombre, correo y celular de la cuenta y de sus pedidos y citas, cancela sus citas sin atender y cierra sus sesiones. Los pedidos se conservan sin datos personales.
-- **Contraseña olvidada:** sin correo transaccional, la clínica la restablece desde **Clientes** en el panel y la entrega por WhatsApp. Al ingresar con ella, el cliente solo puede ir a su perfil hasta cambiarla.
+- **Contraseña olvidada:** ver la sección 21 (código de recuperación). Si el cliente perdió el código, la clínica la restablece desde **Clientes** y la entrega por WhatsApp; al ingresar con ella, solo puede ir a su perfil hasta cambiarla.
 
 **Seguridad.**
 
@@ -516,3 +516,16 @@ Cuentas para que el cliente vea sus pedidos y citas y no escriba sus datos cada 
 - El permiso `cuenta:eliminar` pasa a significar "Solicitar la eliminación de su cuenta".
 
 **Probado en el navegador:** carrito sin cuenta y Action en 401, crear cuenta desde el pedido y volver con el carrito, pedido con los datos de la cuenta, cita sin botón de cancelar y con el enlace de WhatsApp, Action de cancelar inexistente (404), solicitar, retirar y volver a solicitar la eliminación, la administradora la ve pero recibe 403 al ejecutarla, el superadmin la rechaza con pedido en curso y la ejecuta tras cancelarlo, y el cliente queda fuera con sus datos anonimizados.
+
+## 21. Recuperar la contraseña con un código (opción B, decisión del usuario)
+
+Sin dominio propio no hay correo transaccional, así que el cliente recupera su contraseña solo con un **código de recuperación**. Cuando haya dominio, el enlace por correo puede reemplazarlo o complementarlo (anotado en pendientes).
+
+- **El código:** 16 caracteres sin I, O, 0 ni 1, en grupos de 4 (`K7QM-3HXP-9WTR-B2NA`), 80 bits de azar. En la base solo queda su **scrypt** (`usuarios.codigo_recuperacion_hash`), igual que la contraseña: nadie, ni la clínica, puede verlo después.
+- **Al crear la cuenta** se muestra una sola vez en "¡Listo, ya tienes cuenta!" con "Ya lo guardé, continuar".
+- **`/cuenta/recuperar`** (enlace "¿Olvidaste tu contraseña?" en Ingresar): correo + código (mayúsculas, minúsculas, con o sin guiones) + contraseña nueva. Si es correcto, cambia la contraseña, cierra las demás sesiones, deja al cliente con sesión y **le muestra un código nuevo: cada código sirve una sola vez**.
+- **Mismas defensas que el ingreso:** 5 fallos por correo y 20 por IP cada 15 minutos (con el bloqueo, ni el código correcto pasa), retraso creciente, la misma respuesta y un solo scrypt exista o no la cuenta. Solo para cuentas de clientes activas: el personal del panel recupera su acceso con el superadmin.
+- **Mi perfil > Código de recuperación:** muestra desde cuándo tiene uno y permite **generar uno nuevo** con la contraseña actual (el anterior deja de servir).
+- **Base de datos:** el código lo maneja solo el núcleo de sesiones (`vitalis_admin`); el portal (`vitalis_cuenta`) solo puede leer la fecha. La supresión de la cuenta lo borra (migraciones `0014` y `0015`).
+- **Auditoría:** `clave_recuperada`, `recuperacion_fallida` (con `bloqueado` cuando aplica) y `codigo_recuperacion_nuevo`.
+- **Probado en el navegador:** código al registrarse, enlace desde Ingresar, código equivocado, código correcto en minúsculas y sin guiones, sesión iniciada y código nuevo, el código usado ya no sirve, ingreso con la contraseña nueva, generar código en el perfil con contraseña mala y buena, y bloqueo tras 5 fallos. En la base solo hay el scrypt.

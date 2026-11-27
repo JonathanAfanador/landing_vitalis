@@ -3,15 +3,17 @@ import { actions, isInputError } from 'astro:actions';
 import Pagina from '../../layouts/Pagina.astro';
 import Aviso from '../../components/ui/Aviso.astro';
 import Campo from '../../components/formularios/Campo.astro';
+import CodigoRecuperacion from '../../components/cuenta/CodigoRecuperacion.astro';
 import { destinoSeguro } from '../../lib/validacion';
 
 export const prerender = false;
 
 const registro = Astro.getActionResult(actions.cuenta.registrar);
-if (registro?.data) return Astro.redirect(registro.data.destino, 303);
+// Cuenta creada: en lugar de redirigir, se muestra el código de recuperación (es la única vez que se ve).
+const bienvenida = registro?.data ?? null;
 
 const volver = destinoSeguro(Astro.url.searchParams.get('volver'));
-if (Astro.locals.usuario) return Astro.redirect(volver, 303);
+if (!bienvenida && Astro.locals.usuario) return Astro.redirect(volver, 303);
 
 const errores = registro?.error && isInputError(registro.error) ? registro.error.fields : {};
 const errorGeneral = registro?.error && !isInputError(registro.error) ? registro.error.message : null;
@@ -23,123 +25,137 @@ const ingresar =
 ---
 
 <Pagina titulo="Crear cuenta · Vitalis" descripcion="Crea tu cuenta en Vitalis Centro Veterinario." noindex>
-  <div class="mx-auto max-w-md">
-    <p class="caption-3 text-dorado-700">Mi cuenta</p>
-    <h1 class="heading-2 mt-3">Crear cuenta</h1>
-    <p class="body-3 mt-4 text-tinta-600">
-      Así tus pedidos y citas quedan guardados en un solo lugar y los formularios se llenan solos. Comprar y
-      pedir citas sin cuenta sigue siendo posible.
-    </p>
-
-    {errorGeneral && (
-      <Aviso tipo="error" class="mt-6">
-        {errorGeneral}
-      </Aviso>
-    )}
-
-    <form
-      method="POST"
-      action={actions.cuenta.registrar}
-      class="mt-6 flex flex-col gap-4 rounded-3xl bg-arena-100 p-6"
-    >
-      <input type="hidden" name="volver" value={volver} />
-      <Campo
-        name="nombre"
-        etiqueta="Nombre"
-        autocomplete="name"
-        required
-        minlength={2}
-        maxlength={80}
-        value={valor('nombre')}
-        error={primerError('nombre')}
-      />
-      <Campo
-        name="email"
-        etiqueta="Correo"
-        type="email"
-        autocomplete="email"
-        required
-        maxlength={120}
-        value={valor('email')}
-        error={primerError('email')}
-      />
-      <Campo
-        name="telefono"
-        etiqueta="Celular o WhatsApp"
-        type="tel"
-        inputmode="tel"
-        autocomplete="tel-national"
-        required
-        maxlength={20}
-        ayuda="10 dígitos, por ejemplo 300 123 4567."
-        value={valor('telefono')}
-        error={primerError('telefono')}
-      />
-      <Campo
-        name="clave"
-        etiqueta="Contraseña"
-        type="password"
-        autocomplete="new-password"
-        required
-        minlength={12}
-        maxlength={128}
-        ayuda="Mínimo 12 caracteres. Una frase fácil de recordar funciona bien."
-        error={primerError('clave')}
-      />
-      <Campo
-        name="confirmacion"
-        etiqueta="Repite la contraseña"
-        type="password"
-        autocomplete="new-password"
-        required
-        maxlength={128}
-        error={primerError('confirmacion')}
-      />
-
-      <div>
-        <label class="body-6 flex gap-3">
-          <input
-            type="checkbox"
-            name="aceptaDatos"
-            required
-            checked={enviado?.has('aceptaDatos')}
-            aria-invalid={primerError('aceptaDatos') ? 'true' : undefined}
-            aria-describedby="error-acepta-datos"
-            class="mt-0.5 size-5 shrink-0 accent-azul-900"
-          />
-          <span>
-            Autorizo el tratamiento de mis datos según la{' '}
-            <a
-              href="/politica-de-datos"
-              target="_blank"
-              class="underline decoration-dorado-400 underline-offset-4"
-            >
-              política de tratamiento de datos
-            </a>
-            .
-          </span>
-        </label>
-        <p id="error-acepta-datos" class="body-6 mt-1 text-error-700">
-          {primerError('aceptaDatos')}
-        </p>
-      </div>
-
-      <div class="absolute -left-full" aria-hidden="true">
-        <label>
-          No llenes este campo <input type="text" name="sitioWeb" tabindex="-1" autocomplete="off" />
-        </label>
-      </div>
-
-      <button type="submit" class="btn-principal w-full">
-        Crear cuenta
-      </button>
-    </form>
-
-    <p class="body-3 mt-6 text-center">
-      ¿Ya tienes cuenta?{' '}
-      <a href={ingresar} class="font-semibold underline decoration-dorado-400 underline-offset-4">
-        Ingresar
+  {bienvenida ? (
+    <div class="mx-auto max-w-md">
+      <p class="caption-3 text-dorado-700">Mi cuenta</p>
+      <h1 class="heading-2 mt-3">¡Listo, ya tienes cuenta!</h1>
+      <p class="body-3 mt-4 text-tinta-600">
+        Antes de seguir, guarda tu código de recuperación. Lo necesitas si algún día olvidas tu contraseña.
+      </p>
+      <CodigoRecuperacion codigo={bienvenida.codigo} class="mt-6" />
+      <a href={bienvenida.destino} class="btn-principal mt-6 w-full">
+        Ya lo guardé, continuar
       </a>
-    </p>
-  </div>
+    </div>
+  ) : (
+    <div class="mx-auto max-w-md">
+      <p class="caption-3 text-dorado-700">Mi cuenta</p>
+      <h1 class="heading-2 mt-3">Crear cuenta</h1>
+      <p class="body-3 mt-4 text-tinta-600">
+        Así tus pedidos y citas quedan guardados en un solo lugar y los formularios se llenan solos. Para
+        hacer pedidos necesitas una cuenta; las citas puedes pedirlas sin ella.
+      </p>
+
+      {errorGeneral && (
+        <Aviso tipo="error" class="mt-6">
+          {errorGeneral}
+        </Aviso>
+      )}
+
+      <form
+        method="POST"
+        action={actions.cuenta.registrar}
+        class="mt-6 flex flex-col gap-4 rounded-3xl bg-arena-100 p-6"
+      >
+        <input type="hidden" name="volver" value={volver} />
+        <Campo
+          name="nombre"
+          etiqueta="Nombre"
+          autocomplete="name"
+          required
+          minlength={2}
+          maxlength={80}
+          value={valor('nombre')}
+          error={primerError('nombre')}
+        />
+        <Campo
+          name="email"
+          etiqueta="Correo"
+          type="email"
+          autocomplete="email"
+          required
+          maxlength={120}
+          value={valor('email')}
+          error={primerError('email')}
+        />
+        <Campo
+          name="telefono"
+          etiqueta="Celular o WhatsApp"
+          type="tel"
+          inputmode="tel"
+          autocomplete="tel-national"
+          required
+          maxlength={20}
+          ayuda="10 dígitos, por ejemplo 300 123 4567."
+          value={valor('telefono')}
+          error={primerError('telefono')}
+        />
+        <Campo
+          name="clave"
+          etiqueta="Contraseña"
+          type="password"
+          autocomplete="new-password"
+          required
+          minlength={12}
+          maxlength={128}
+          ayuda="Mínimo 12 caracteres. Una frase fácil de recordar funciona bien."
+          error={primerError('clave')}
+        />
+        <Campo
+          name="confirmacion"
+          etiqueta="Repite la contraseña"
+          type="password"
+          autocomplete="new-password"
+          required
+          maxlength={128}
+          error={primerError('confirmacion')}
+        />
+
+        <div>
+          <label class="body-6 flex gap-3">
+            <input
+              type="checkbox"
+              name="aceptaDatos"
+              required
+              checked={enviado?.has('aceptaDatos')}
+              aria-invalid={primerError('aceptaDatos') ? 'true' : undefined}
+              aria-describedby="error-acepta-datos"
+              class="mt-0.5 size-5 shrink-0 accent-azul-900"
+            />
+            <span>
+              Autorizo el tratamiento de mis datos según la{' '}
+              <a
+                href="/politica-de-datos"
+                target="_blank"
+                class="underline decoration-dorado-400 underline-offset-4"
+              >
+                política de tratamiento de datos
+              </a>
+              .
+            </span>
+          </label>
+          <p id="error-acepta-datos" class="body-6 mt-1 text-error-700">
+            {primerError('aceptaDatos')}
+          </p>
+        </div>
+
+        <div class="absolute -left-full" aria-hidden="true">
+          <label>
+            No llenes este campo <input type="text" name="sitioWeb" tabindex="-1" autocomplete="off" />
+          </label>
+        </div>
+
+        <button type="submit" class="btn-principal w-full">
+          Crear cuenta
+        </button>
+      </form>
+
+      <p class="body-3 mt-6 text-center">
+        ¿Ya tienes cuenta?{' '}
+        <a href={ingresar} class="font-semibold underline decoration-dorado-400 underline-offset-4">
+          Ingresar
+        </a>
+      </p>
+    </div>
+  )}
 </Pagina>

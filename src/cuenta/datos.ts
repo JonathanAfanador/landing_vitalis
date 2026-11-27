@@ -16,6 +16,7 @@ export const miPerfil = (usuarioId: number) =>
         telefono: usuarios.telefono,
         desde: usuarios.createdAt,
         eliminacionSolicitadaEn: usuarios.eliminacionSolicitadaEn,
+        codigoRecuperacionEn: usuarios.codigoRecuperacionEn,
       })
       .from(usuarios)
       .where(eq(usuarios.id, usuarioId));

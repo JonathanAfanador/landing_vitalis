@@ -51,3 +51,20 @@ export function validarClaveNueva(clave: string, email: string): string | null {
 
 // Contraseña temporal para usuarios nuevos o restablecidos: se muestra una vez y obliga a cambiarla.
 export const generarClaveTemporal = () => randomBytes(12).toString('base64url');
+
+// Código de recuperación de contraseña (sin servicio de correo): 16 caracteres sin I, O, 0 ni 1, en grupos de 4
+// para copiarlo a mano, p. ej. K7QM-3HXP-9WTR-B2NA. 32 símbolos = 5 bits cada uno: 80 bits de azar (y 256 es
+// múltiplo de 32, así que el módulo no sesga). Se guarda con scrypt, como la contraseña.
+const ALFABETO_CODIGO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+export function generarCodigoRecuperacion() {
+  const simbolos = Array.from(randomBytes(16), (b) => ALFABETO_CODIGO[b % ALFABETO_CODIGO.length]).join('');
+  return simbolos.match(/.{4}/g)?.join('-') ?? simbolos;
+}
+
+// Lo que escribe la persona, al formato guardado: mayúsculas y guiones cada 4, sin importar cómo lo separó.
+export const normalizarCodigoRecuperacion = (codigo: string) =>
+  codigo
+    .toUpperCase()
+    .replace(/[\s-]/g, '')
+    .replace(/(.{4})(?=.)/g, '$1-');

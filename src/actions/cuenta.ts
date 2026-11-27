@@ -2,8 +2,14 @@ import { ActionError, defineAction, type ActionAPIContext } from 'astro:actions'
 import { z } from 'astro/zod';
 import { registrar } from '../admin/auditoria';
 import { can, esCliente, type UsuarioSesion } from '../admin/autorizacion';
-import { CorreoEnUso, crearCuentaCliente, cuentasRecientesPorIp } from '../admin/cuentas';
-import { cambiarClavePropia, intentarLogin } from '../admin/login';
+import {
+  claveCorrecta,
+  CorreoEnUso,
+  crearCuentaCliente,
+  cuentasRecientesPorIp,
+  nuevoCodigoRecuperacion,
+} from '../admin/cuentas';
+import { cambiarClavePropia, intentarLogin, recuperarConCodigo } from '../admin/login';
 import type { CodigoPermiso } from '../admin/permisos';
 import { COOKIE_SESION, cerrarSesion, crearSesion } from '../admin/sesiones';
 import { actualizarMiPerfil, marcarSolicitudEliminacion } from '../cuenta/datos';
@@ -46,10 +52,11 @@ export const cuenta = {
       }
 
       try {
-        const id = await crearCuentaCliente(datos);
+        const { id, codigo } = await crearCuentaCliente(datos);
         await crearSesion(id, ctx.cookies);
         await registrar({ actorId: id, evento: 'cuenta_creada', entidad: 'usuario', entidadId: id, ipHash });
-        return { destino: destinoSeguro(datos.volver) };
+        // El código de recuperación se muestra una sola vez, en la página de bienvenida.
+        return { destino: destinoSeguro(datos.volver), codigo };
       } catch (error) {
         if (!(error instanceof CorreoEnUso)) throw error;
         throw new ActionError({
@@ -73,6 +80,41 @@ export const cuenta = {
         throw new ActionError({ code: 'UNAUTHORIZED', message: 'Correo o contraseña incorrectos.' });
       }
       return { destino: destinoSeguro(volver) };
+    }),
+  }),
+
+  // "Olvidé mi contraseña": correo + código de recuperación. Devuelve el código nuevo (el usado ya no sirve).
+  recuperar: defineAction({
+    accept: 'form',
+    input: z.object({
+      email: z.string().trim().min(1, 'Escribe tu correo.').max(120),
+      codigo: z.string().trim().min(1, 'Escribe tu código de recuperación.').max(40),
+      nueva: z.string().max(CLAVE_MAX),
+      confirmacion: z.string().max(CLAVE_MAX),
+    }),
+    handler: protegerErrores(async (datos, ctx) => {
+      const resultado = await recuperarConCodigo(datos, ctx.clientAddress, ctx.cookies);
+      if (!resultado.ok) throw new ActionError({ code: 'BAD_REQUEST', message: resultado.motivo });
+      return { codigo: resultado.codigo };
+    }),
+  }),
+
+  nuevoCodigoRecuperacion: defineAction({
+    accept: 'form',
+    input: z.object({ clave: clave('Escribe tu contraseña para confirmar.') }),
+    handler: protegerErrores(async ({ clave }, ctx) => {
+      const usuario = requerirCliente(ctx.locals.usuario, 'cuenta:editar_perfil');
+      if (!(await claveCorrecta(usuario.id, clave))) {
+        throw new ActionError({ code: 'BAD_REQUEST', message: 'La contraseña no es correcta.' });
+      }
+      const codigo = await nuevoCodigoRecuperacion(usuario.id);
+      await registrar({
+        actorId: usuario.id,
+        evento: 'codigo_recuperacion_nuevo',
+        entidad: 'usuario',
+        entidadId: usuario.id,
+      });
+      return { codigo };
     }),
   }),
 

@@ -3,6 +3,7 @@ import { actions, isInputError } from 'astro:actions';
 import CuentaLayout from '../../layouts/CuentaLayout.astro';
 import Aviso from '../../components/ui/Aviso.astro';
 import Campo from '../../components/formularios/Campo.astro';
+import CodigoRecuperacion from '../../components/cuenta/CodigoRecuperacion.astro';
 import { can, esCliente, puedeEntrarAlPanel } from '../../admin/autorizacion';
 import { miPerfil } from '../../cuenta/datos';
 import { formatoTelefono } from '../../lib/formato';
@@ -17,6 +18,8 @@ const datos = Astro.getActionResult(actions.cuenta.actualizarPerfil);
 const clave = Astro.getActionResult(actions.cuenta.cambiarClave);
 const solicitud = Astro.getActionResult(actions.cuenta.solicitarEliminacion);
 const retiro = Astro.getActionResult(actions.cuenta.retirarSolicitudEliminacion);
+// El código nuevo se muestra en la misma respuesta (no se redirige): es la única vez que se ve.
+const codigo = Astro.getActionResult(actions.cuenta.nuevoCodigoRecuperacion);
 if (datos?.data) return Astro.redirect('/cuenta/perfil?ok=datos', 303);
 if (clave?.data) return Astro.redirect('/cuenta/perfil?ok=clave', 303);
 if (solicitud?.data) return Astro.redirect('/cuenta/perfil?ok=solicitud', 303);
@@ -136,6 +139,46 @@ const tarjeta = 'rounded-3xl border border-azul-900/10 p-6';
       </section>
     )}
   </div>
+
+  {editaPerfil && !usuario.debeCambiarClave && (
+    <section aria-labelledby="titulo-codigo" class:list={[tarjeta, 'mt-6']} id="codigo">
+      <h2 id="titulo-codigo" class="heading-5">
+        Código de recuperación
+      </h2>
+      {codigo?.data ? (
+        <CodigoRecuperacion codigo={codigo.data.codigo} class="mt-4" />
+      ) : (
+        <>
+          <p class="body-6 mt-2 max-w-2xl text-tinta-600">
+            {perfil.codigoRecuperacionEn
+              ? `Tienes un código activo desde el ${desde.format(perfil.codigoRecuperacionEn)}. Si lo perdiste, genera uno nuevo: el anterior dejará de servir.`
+              : 'No tienes un código de recuperación. Genera uno para poder cambiar tu contraseña tú mismo si la olvidas.'}
+          </p>
+          {codigo?.error && (
+            <Aviso tipo="error" class="mt-4">
+              {codigo.error.message}
+            </Aviso>
+          )}
+          <form
+            method="POST"
+            action={actions.cuenta.nuevoCodigoRecuperacion}
+            class="mt-6 flex max-w-md flex-col gap-4"
+          >
+            <Campo
+              name="clave"
+              etiqueta="Tu contraseña, para confirmar"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
+            <button type="submit" class="btn-borde self-start">
+              Generar código nuevo
+            </button>
+          </form>
+        </>
+      )}
+    </section>
+  )}
 
   {puedeEliminar && !usuario.debeCambiarClave && (
     <section aria-labelledby="titulo-eliminar" class="mt-12 rounded-3xl border border-error-700/30 p-6">

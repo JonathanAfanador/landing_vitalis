@@ -1,0 +1,105 @@
+---
+import { actions } from 'astro:actions';
+import Pagina from '../../layouts/Pagina.astro';
+import Aviso from '../../components/ui/Aviso.astro';
+import Campo from '../../components/formularios/Campo.astro';
+import CodigoRecuperacion from '../../components/cuenta/CodigoRecuperacion.astro';
+
+export const prerender = false;
+
+const recuperacion = Astro.getActionResult(actions.cuenta.recuperar);
+// Si sale bien, la persona ya quedó con sesión y se le muestra su código nuevo (el usado ya no sirve).
+const nuevo = recuperacion?.data?.codigo ?? null;
+if (!nuevo && Astro.locals.usuario) return Astro.redirect('/cuenta/perfil', 303);
+
+const enviado = recuperacion?.error ? await Astro.request.formData() : null;
+---
+
+<Pagina titulo="Recuperar contraseña · Vitalis" descripcion="Pon una contraseña nueva con tu código." noindex>
+  <div class="mx-auto max-w-md">
+    <p class="caption-3 text-dorado-700">Mi cuenta</p>
+    {nuevo ? (
+      <>
+        <h1 class="heading-2 mt-3">Cambiamos tu contraseña</h1>
+        <p class="body-3 mt-4 text-tinta-600">
+          Ya ingresaste con la contraseña nueva. El código que usaste ya no sirve: este es el nuevo.
+        </p>
+        <CodigoRecuperacion codigo={nuevo} class="mt-6" />
+        <a href="/cuenta" class="btn-principal mt-6 w-full">
+          Ya lo guardé, ir a mi cuenta
+        </a>
+      </>
+    ) : (
+      <>
+        <h1 class="heading-2 mt-3">¿Olvidaste tu contraseña?</h1>
+        <p class="body-3 mt-4 text-tinta-600">
+          Escribe tu correo y el código de recuperación que te mostramos al crear tu cuenta. Luego elige una
+          contraseña nueva.
+        </p>
+
+        {recuperacion?.error && (
+          <Aviso tipo="error" class="mt-6">
+            {recuperacion.error.message}
+          </Aviso>
+        )}
+
+        <form
+          method="POST"
+          action={actions.cuenta.recuperar}
+          class="mt-6 flex flex-col gap-4 rounded-3xl bg-arena-100 p-6"
+        >
+          <Campo
+            name="email"
+            etiqueta="Correo"
+            type="email"
+            autocomplete="username"
+            required
+            maxlength={120}
+            value={String(enviado?.get('email') ?? '') || undefined}
+          />
+          <Campo
+            name="codigo"
+            etiqueta="Código de recuperación"
+            required
+            maxlength={40}
+            autocomplete="off"
+            autocapitalize="characters"
+            spellcheck="false"
+            ayuda="16 letras y números, por ejemplo K7QM-3HXP-9WTR-B2NA. Los guiones son opcionales."
+            value={String(enviado?.get('codigo') ?? '') || undefined}
+          />
+          <Campo
+            name="nueva"
+            etiqueta="Contraseña nueva"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength={12}
+            maxlength={128}
+            ayuda="Mínimo 12 caracteres."
+          />
+          <Campo
+            name="confirmacion"
+            etiqueta="Repite la contraseña nueva"
+            type="password"
+            autocomplete="new-password"
+            required
+            maxlength={128}
+          />
+          <button type="submit" class="btn-principal w-full">
+            Cambiar contraseña
+          </button>
+        </form>
+
+        <p class="body-6 mt-6 text-center text-tinta-600">
+          ¿Perdiste el código? Escríbenos por WhatsApp y te ayudamos a recuperar el acceso.
+        </p>
+        <p class="body-3 mt-4 text-center">
+          <a href="/cuenta/ingresar" class="font-semibold underline decoration-dorado-400 underline-offset-4">
+            Volver a ingresar
+          </a>
+        </p>
+      </>
+    )}
+  </div>
+</Pagina>

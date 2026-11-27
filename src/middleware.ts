@@ -7,13 +7,19 @@ const SIN_PERMISO = '/admin/sin-permiso';
 const CAMBIAR_CLAVE = '/admin/cambiar-clave';
 const PERFIL_CUENTA = '/cuenta/perfil';
 // Páginas de panel y portal que se ven sin sesión.
-const RUTAS_SIN_SESION = new Set(['/admin/login', '/cuenta/ingresar', '/cuenta/registro']);
+const RUTAS_SIN_SESION = new Set([
+  '/admin/login',
+  '/cuenta/ingresar',
+  '/cuenta/registro',
+  '/cuenta/recuperar',
+]);
 // Actions que se pueden llamar sin sesión.
 const ACTIONS_SIN_SESION = new Set([
   'admin.auth.ingresar',
   'admin.auth.salir',
   'cuenta.registrar',
   'cuenta.ingresar',
+  'cuenta.recuperar',
   'cuenta.salir',
 ]);
 // Páginas y Actions públicas que, si hay sesión de cliente, se prellenan y guardan en su cuenta.

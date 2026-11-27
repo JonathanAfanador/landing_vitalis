@@ -19,6 +19,8 @@ La web usa PostgreSQL en Neon con Drizzle ORM. Las tablas viven en el schema `vi
 | `drizzle/0011_rol_cuenta_y_rls.sql` | Rol `vitalis_cuenta`, RLS en usuarios, pedidos, líneas y citas, y la función que anonimiza una cuenta eliminada por su titular |
 | `drizzle/0012_solicitud_eliminacion.sql` | Fecha de la solicitud de eliminación de una cuenta de cliente |
 | `drizzle/0013_permisos_solicitud_eliminacion.sql` | El portal ya no cambia citas; el cliente solo marca o retira su solicitud de eliminación |
+| `drizzle/0014_codigo_recuperacion.sql` | Código de recuperación de contraseña de los clientes (solo su scrypt) y su fecha |
+| `drizzle/0015_permisos_codigo_recuperacion.sql` | Solo el núcleo de sesiones maneja el código; el portal ve únicamente la fecha. La supresión lo borra |
 | `scripts/sincronizar-permisos.ts` | Copia el catálogo de permisos del código a la base (corre solo con `pnpm db:migrate`) |
 | `scripts/crear-superadmin.ts` | Crea el primer superadmin |
 | `scripts/seed-demo.ts` | Medicamentos de ejemplo `[DEMO]`, solo para desarrollo |

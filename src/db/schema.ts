@@ -297,6 +297,9 @@ export const usuarios = vitalis.table(
     aceptaDatosEn: timestamp('acepta_datos_en', { withTimezone: true }),
     // El cliente pidió borrar su cuenta (Ley 1581): la clínica la revisa y el superadmin la elimina.
     eliminacionSolicitadaEn: timestamp('eliminacion_solicitada_en', { withTimezone: true }),
+    // Código de recuperación de contraseña (solo clientes): se muestra una vez y aquí queda su scrypt.
+    codigoRecuperacionHash: text('codigo_recuperacion_hash'),
+    codigoRecuperacionEn: timestamp('codigo_recuperacion_en', { withTimezone: true }),
     ultimoAcceso: timestamp('ultimo_acceso', { withTimezone: true }),
     createdAt: creado(),
     updatedAt: actualizado(),
@@ -311,6 +314,7 @@ export const usuarios = vitalis.table(
     ),
     check('usuarios_clave_formato', sql`${t.claveHash} like 'scrypt$%'`),
     check('usuarios_telefono_formato', sql`${t.telefono} ~ '^[0-9]{10}$'`),
+    check('usuarios_codigo_recuperacion_formato', sql`${t.codigoRecuperacionHash} like 'scrypt$%'`),
   ],
 );
 
@@ -336,6 +340,9 @@ export const EVENTOS_AUDITORIA = [
   'cuenta_creada',
   'cuenta_eliminada',
   'eliminacion_solicitada',
+  'codigo_recuperacion_nuevo',
+  'clave_recuperada',
+  'recuperacion_fallida',
   'clave_cambiada',
   'clave_restablecida',
   'usuario_creado',
