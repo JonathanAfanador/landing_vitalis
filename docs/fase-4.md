@@ -458,6 +458,41 @@ La administradora acomoda los horarios, así que la web no maneja agenda: **el f
 
 **Paginación.**
 
-- Antes había un solo botón "Registros anteriores" que aparecía después de 30 o 50 filas, sin decir en qué página se estaba ni permitir volver. Ahora pedidos, citas y medicamentos (25 por página) y auditoría (50) muestran **"1–25 de 60"**, Anterior, los números de página y Siguiente, conservando los filtros.
+- Antes había un solo botón "Registros anteriores" que aparecía después de 30 o 50 filas, sin decir en qué página se estaba ni permitir volver. Ahora pedidos, citas, medicamentos y auditoría (25 por página) muestran **"1–25 de 60"**, Anterior, los números de página y Siguiente, conservando los filtros.
 - Se pagina por número (`?pagina=2`, LIMIT/OFFSET con conteo total): con los volúmenes de una clínica es rápido y más claro que el cursor. Una página que ya no existe lleva a la última. Se elimina `src/admin/cursor.ts`. La tienda pública conserva su paginación.
 - **Probado contra PostgreSQL 16 local** con 60 citas y 134 registros de auditoría: páginas y redirección, descargas abiertas con openpyxl y LibreOffice, eliminar y restaurar como superadmin, pedido pendiente no eliminable, y como admin sin pestaña, sin botones, descarga en 403 y Actions de eliminar en 403.
+
+## 19. Entrega 4D: portal de clientes
+
+Cuentas para que el cliente vea sus pedidos y citas y no escriba sus datos cada vez. **Comprar y pedir citas sin cuenta sigue funcionando igual.**
+
+**Para el cliente (`/cuenta`).**
+
+- **Rutas:** `/cuenta/registro`, `/cuenta/ingresar` (con `?volver=` para regresar a `/pedido` o `/cita`), `/cuenta` (mis pedidos y mis citas) y `/cuenta/perfil`. "Salir" es un formulario, no un enlace. El encabezado público tiene el icono "Mi cuenta".
+- **Registro:** nombre, correo, celular, contraseña (mínimo 12 caracteres) y autorización de la Ley 1581 (se guarda cuándo la dio). El servidor **siempre** asigna el rol `usuario`. Campo trampa y **5 cuentas por IP cada hora**. Un correo repetido se avisa: sin correo de verificación no hay forma de ocultarlo sin bloquear a quien sí es el dueño.
+- **Ingreso:** el mismo de siempre (sesiones propias, scrypt, 5 fallos por correo y 20 por IP cada 15 minutos, misma respuesta y mismo tiempo exista o no la cuenta).
+- **Con sesión**, `/pedido` y `/cita` vienen prellenados y lo enviado queda ligado a la cuenta (`usuario_id`). Lo hecho sin cuenta no se reclama después.
+- **Mis pedidos:** código, fecha, total, medicamentos, estado y qué sigue ("Te enviamos por WhatsApp los datos para pagar…"). **Mis citas:** mascota, motivo, preferencia, estado y **Cancelar cita** (con confirmación) mientras esté por agendar o agendada.
+- **Perfil:** cambiar nombre y celular (el correo no cambia), cambiar la contraseña (cierra las demás sesiones) y **eliminar la cuenta**.
+- **Eliminar la cuenta (derecho de supresión):** pide la contraseña y una casilla, y no se permite con pedidos en curso (pendiente, confirmado o pagado), para no perder el contacto de un pedido a medias. Una función de la base (`vitalis.eliminar_cuenta_cliente`, con permisos de dueño) borra nombre, correo y celular de la cuenta y de sus pedidos y citas, cancela sus citas sin atender y cierra sus sesiones. Los pedidos se conservan sin datos personales.
+- **Contraseña olvidada:** sin correo transaccional, la clínica la restablece desde **Clientes** en el panel y la entrega por WhatsApp. Al ingresar con ella, el cliente solo puede ir a su perfil hasta cambiarla.
+
+**Seguridad.**
+
+- **Tercer rol de base de datos, `vitalis_cuenta`, con RLS** en `usuarios`, `pedidos`, `pedido_items` y `solicitudes_cita`. Cada consulta del portal corre en una transacción con `set_config('vitalis.usuario_id', id, true)` (`comoCuenta()` en `src/db/client-cuenta.ts`); las políticas solo dejan ver las filas de esa cuenta, no eliminadas, y solo dejan pasar una cita a "cancelada". Sin cuenta fijada no ve nada. Los otros dos roles tienen políticas explícitas que mantienen exactamente lo que ya podían hacer. Probado con `SET ROLE` como cada rol y con dos clientes cruzados.
+- **ESLint vigila las tres zonas:** el portal no puede importar la conexión ni los módulos del panel (solo las reglas de autorización, que no tocan la base), y ni el panel ni las páginas públicas pueden usar la conexión del portal.
+- **Un cliente nunca entra al panel:** el middleware lo manda a `/cuenta`, y `puedeEntrarAlPanel` ignora los permisos de "Mi cuenta" y rechaza el rol `usuario` aunque alguien le asigne permisos del panel. El personal que abre `/cuenta` va a `/admin`.
+- **El middleware solo consulta la sesión** en el panel, el portal, `/pedido`, `/cita` y sus Actions: la portada y la tienda siguen sin tocar la base por sesiones.
+
+**Para la clínica (`/admin/clientes`).**
+
+- Listado de cuentas con búsqueda por nombre, correo o celular, paginado, con cuántos pedidos y citas tiene cada una. **Restablecer contraseña** (la temporal se muestra una sola vez) y **Desactivar o reactivar**. Las cuentas eliminadas por su titular se muestran sin datos ni acciones.
+- **Permisos propios, `clientes:ver` y `clientes:gestionar`**, para el rol `admin` por defecto. Están separados de `usuarios:*` a propósito: la administradora atiende a los clientes sin poder tocar al personal del panel. Las Actions de clientes solo alcanzan filas con rol `usuario`, y las de usuarios rechazan cuentas de clientes.
+
+**Permisos nuevos (7):** `cuenta:ver_pedidos`, `cuenta:ver_citas`, `cuenta:cancelar_cita`, `cuenta:editar_perfil`, `cuenta:eliminar` (rol `usuario`) y `clientes:ver`, `clientes:gestionar` (rol `admin`).
+
+**Migraciones:** `0010` (celular y autorización en `usuarios`, `usuario_id` en pedidos y citas, eventos `cuenta_creada` y `cuenta_eliminada`) y `0011` (rol, GRANT, RLS y función de supresión). **Requiere la variable `DATABASE_URL_CUENTA`** (ver `docs/base-de-datos.md`).
+
+**Además:** la auditoría pasa a 25 registros por página, como el resto del panel.
+
+**Probado contra PostgreSQL 16 local en el navegador:** registro, cita y pedido prellenados y ligados, mis pedidos y citas, cancelar cita, cliente en `/admin` va a `/cuenta`, editar perfil, contraseña incorrecta, eliminar con pedido en curso rechazado, salir, correo repetido, volver a `/pedido` tras ingresar; en el panel, la administradora ve Clientes, restablece la contraseña, el cliente queda obligado a cambiarla, la clínica cancela el pedido y el cliente elimina su cuenta con todos sus datos anonimizados; Actions cruzadas entre zonas rechazadas.

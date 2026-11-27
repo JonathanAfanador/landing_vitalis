@@ -18,11 +18,14 @@ export const MODULOS = {
   categorias: 'Categorías',
   pedidos: 'Pedidos',
   citas: 'Citas',
+  clientes: 'Clientes',
   usuarios: 'Usuarios',
   auditoria: 'Auditoría',
+  cuenta: 'Mi cuenta (clientes del portal)',
 } as const;
 
 const ADMIN = ['admin'] as const;
+const CLIENTE = ['usuario'] as const;
 
 export const PERMISOS = {
   'medicamentos:ver': {
@@ -119,6 +122,22 @@ export const PERMISOS = {
     datosPersonales: true,
     requiere: ['citas:ver'],
   },
+  // Cuentas de clientes del portal. Separado de usuarios:* para que la administradora atienda a los clientes
+  // (contraseña olvidada) sin poder tocar al personal del panel.
+  'clientes:ver': {
+    modulo: 'clientes',
+    nombre: 'Ver clientes',
+    descripcion: 'Ver las cuentas de clientes de la web con su nombre, correo y celular.',
+    datosPersonales: true,
+    porDefecto: ADMIN,
+  },
+  'clientes:gestionar': {
+    modulo: 'clientes',
+    nombre: 'Gestionar clientes',
+    descripcion: 'Restablecer la contraseña de un cliente y desactivar o reactivar su cuenta.',
+    requiere: ['clientes:ver'],
+    porDefecto: ADMIN,
+  },
   'usuarios:ver': {
     modulo: 'usuarios',
     nombre: 'Ver usuarios',
@@ -143,6 +162,38 @@ export const PERMISOS = {
     nombre: 'Ver auditoría',
     descripcion: 'Ver el registro de actividad del panel: inicios de sesión, cambios de roles y operaciones.',
   },
+  // Portal de clientes (/cuenta). Siempre sobre lo propio: RLS en la base lo garantiza aunque el código falle.
+  'cuenta:ver_pedidos': {
+    modulo: 'cuenta',
+    nombre: 'Ver sus pedidos',
+    descripcion: 'Ver en /cuenta los pedidos hechos con su cuenta y su estado.',
+    porDefecto: CLIENTE,
+  },
+  'cuenta:ver_citas': {
+    modulo: 'cuenta',
+    nombre: 'Ver sus citas',
+    descripcion: 'Ver en /cuenta las citas pedidas con su cuenta y su estado.',
+    porDefecto: CLIENTE,
+  },
+  'cuenta:cancelar_cita': {
+    modulo: 'cuenta',
+    nombre: 'Cancelar sus citas',
+    descripcion: 'Cancelar sus citas por agendar o agendadas.',
+    requiere: ['cuenta:ver_citas'],
+    porDefecto: CLIENTE,
+  },
+  'cuenta:editar_perfil': {
+    modulo: 'cuenta',
+    nombre: 'Editar su perfil',
+    descripcion: 'Cambiar su nombre, celular y contraseña.',
+    porDefecto: CLIENTE,
+  },
+  'cuenta:eliminar': {
+    modulo: 'cuenta',
+    nombre: 'Eliminar su cuenta',
+    descripcion: 'Borrar su cuenta y sus datos personales (derecho de supresión, Ley 1581).',
+    porDefecto: CLIENTE,
+  },
 } as const satisfies Record<string, DefPermiso>;
 
 export type CodigoPermiso = keyof typeof PERMISOS;
@@ -156,3 +207,7 @@ export const EXCLUSIVAS_SUPERADMIN = [GESTIONAR_ROLES, ELIMINAR_REGISTROS] as co
 export type Capacidad = CodigoPermiso | (typeof EXCLUSIVAS_SUPERADMIN)[number];
 
 export const esCodigoPermiso = (codigo: string): codigo is CodigoPermiso => Object.hasOwn(PERMISOS, codigo);
+
+// Los permisos de "Mi cuenta" son del portal de clientes: no abren el panel.
+export const esPermisoDePanel = (codigo: string) =>
+  esCodigoPermiso(codigo) && PERMISOS[codigo].modulo !== 'cuenta';

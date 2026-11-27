@@ -2,7 +2,7 @@
 import AdminLayout from '../../layouts/AdminLayout.astro';
 import Paginacion from '../../components/admin/Paginacion.astro';
 import SinPermiso from '../../components/admin/SinPermiso.astro';
-import { AUDITORIA_POR_PAGINA, listarAuditoria } from '../../admin/auditoria';
+import { listarAuditoria } from '../../admin/auditoria';
 import { permisoDePagina } from '../../admin/guard';
 import { leerPagina, totalPaginas } from '../../admin/paginacion';
 import { EVENTOS_AUDITORIA, type EventoAuditoria } from '../../db/schema';
@@ -15,6 +15,8 @@ const NOMBRES: Record<EventoAuditoria, string> = {
   login_ok: 'Ingreso',
   login_fallido: 'Ingreso fallido',
   logout: 'Cierre de sesión',
+  cuenta_creada: 'Cuenta de cliente creada',
+  cuenta_eliminada: 'Cuenta de cliente eliminada',
   clave_cambiada: 'Contraseña cambiada',
   clave_restablecida: 'Contraseña restablecida',
   usuario_creado: 'Usuario creado',
@@ -46,7 +48,7 @@ const eventoParam = Astro.url.searchParams.get('evento');
 const evento = EVENTOS_AUDITORIA.find((e) => e === eventoParam);
 const pagina = leerPagina(Astro.url.searchParams.get('pagina'));
 const { registros, total } = actor ? await listarAuditoria({ evento, pagina }) : { registros: [], total: 0 };
-const ultima = totalPaginas(total, AUDITORIA_POR_PAGINA);
+const ultima = totalPaginas(total);
 if (actor && pagina > ultima) {
   const url = new URL(Astro.url);
   url.searchParams.set('pagina', String(ultima));
@@ -149,7 +151,7 @@ const resumir = (detalle: Record<string, unknown> | null) =>
         <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">No hay registros con ese filtro.</p>
       )}
 
-      <Paginacion pagina={pagina} total={total} porPagina={AUDITORIA_POR_PAGINA} nombre="registros" />
+      <Paginacion pagina={pagina} total={total} nombre="registros" />
     </>
   )}
 </AdminLayout>

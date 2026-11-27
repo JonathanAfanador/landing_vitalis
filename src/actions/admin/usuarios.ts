@@ -39,6 +39,16 @@ async function cargarObjetivo(usuarioId: number) {
   return objetivo;
 }
 
+// Las cuentas de clientes tienen su propia sección y permisos (clientes:*), separados del personal.
+const exigirNoCliente = (rolSlug: string) => {
+  if (rolSlug === 'usuario') {
+    throw new ActionError({
+      code: 'BAD_REQUEST',
+      message: 'Las cuentas de clientes se gestionan en Clientes.',
+    });
+  }
+};
+
 export const usuariosAdmin = {
   crear: defineAction({
     accept: 'form',
@@ -115,6 +125,7 @@ export const usuariosAdmin = {
     handler: protegerErrores(async ({ usuarioId, activo }, ctx) => {
       const actor = requerirPermiso(ctx.locals.usuario, 'usuarios:gestionar');
       const objetivo = await cargarObjetivo(usuarioId);
+      exigirNoCliente(objetivo.rol.slug);
       exigir(puedeGestionarUsuario(actor, objetivo, activo ? 'reactivar' : 'desactivar'));
       if (
         !activo &&
@@ -145,6 +156,7 @@ export const usuariosAdmin = {
     handler: protegerErrores(async ({ usuarioId }, ctx) => {
       const actor = requerirPermiso(ctx.locals.usuario, 'usuarios:gestionar');
       const objetivo = await cargarObjetivo(usuarioId);
+      exigirNoCliente(objetivo.rol.slug);
       exigir(puedeGestionarUsuario(actor, objetivo, 'restablecer'));
 
       const claveTemporal = generarClaveTemporal();

@@ -1,0 +1,11 @@
+ALTER TABLE "vitalis"."auditoria" DROP CONSTRAINT "auditoria_evento_valido";--> statement-breakpoint
+ALTER TABLE "vitalis"."pedidos" ADD COLUMN "usuario_id" bigint;--> statement-breakpoint
+ALTER TABLE "vitalis"."solicitudes_cita" ADD COLUMN "usuario_id" bigint;--> statement-breakpoint
+ALTER TABLE "vitalis"."usuarios" ADD COLUMN "telefono" text;--> statement-breakpoint
+ALTER TABLE "vitalis"."usuarios" ADD COLUMN "acepta_datos_en" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "vitalis"."pedidos" ADD CONSTRAINT "pedidos_usuario_id_usuarios_id_fk" FOREIGN KEY ("usuario_id") REFERENCES "vitalis"."usuarios"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "vitalis"."solicitudes_cita" ADD CONSTRAINT "solicitudes_cita_usuario_id_usuarios_id_fk" FOREIGN KEY ("usuario_id") REFERENCES "vitalis"."usuarios"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+CREATE INDEX "pedidos_usuario_id_idx" ON "vitalis"."pedidos" USING btree ("usuario_id");--> statement-breakpoint
+CREATE INDEX "solicitudes_cita_usuario_id_idx" ON "vitalis"."solicitudes_cita" USING btree ("usuario_id");--> statement-breakpoint
+ALTER TABLE "vitalis"."auditoria" ADD CONSTRAINT "auditoria_evento_valido" CHECK (evento in ('login_ok', 'login_fallido', 'logout', 'cuenta_creada', 'cuenta_eliminada', 'clave_cambiada', 'clave_restablecida', 'usuario_creado', 'usuario_desactivado', 'usuario_reactivado', 'rol_asignado', 'rol_creado', 'rol_editado', 'rol_eliminado', 'permisos_rol_cambiados', 'medicamento_creado', 'medicamento_editado', 'medicamento_eliminado', 'stock_ajustado', 'categoria_creada', 'categoria_editada', 'categoria_eliminada', 'pedido_estado_cambiado', 'pedido_eliminado', 'pedido_restaurado', 'pedidos_exportados', 'cita_estado_cambiado', 'cita_eliminada', 'cita_restaurada', 'citas_exportadas'));--> statement-breakpoint
+ALTER TABLE "vitalis"."usuarios" ADD CONSTRAINT "usuarios_telefono_formato" CHECK ("vitalis"."usuarios"."telefono" ~ '^[0-9]{10}$');

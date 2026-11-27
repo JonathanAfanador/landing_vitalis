@@ -15,12 +15,13 @@ export default defineConfig({
     schema: {
       DATABASE_URL: envField.string({ context: 'server', access: 'secret' }),
       DATABASE_URL_ADMIN: envField.string({ context: 'server', access: 'secret' }),
+      DATABASE_URL_CUENTA: envField.string({ context: 'server', access: 'secret' }),
       IP_HASH_SALT: envField.string({ context: 'server', access: 'secret', min: 16 }),
     },
   },
   integrations: [
     sitemap({
-      filter: (page) => !/\/(admin|pedido|404)/.test(page),
+      filter: (page) => !/\/(admin|cuenta|pedido|404)/.test(page),
     }),
   ],
   fonts: [

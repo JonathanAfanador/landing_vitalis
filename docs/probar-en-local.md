@@ -70,13 +70,14 @@ pnpm install
 
 ## 3. El archivo `.env`
 
-Va en la raíz del proyecto, la misma carpeta donde está `package.json`. Copia `.env.example` como guía. Al final debe tener estas 5 variables:
+Va en la raíz del proyecto, la misma carpeta donde está `package.json`. Copia `.env.example` como guía. Al final debe tener estas 6 variables:
 
 | Variable | Qué va |
 | :-- | :-- |
 | `DATABASE_URL_MIGRACIONES` | La cadena de Neon **sin pooling** (usuario `neondb_owner`) |
 | `DATABASE_URL` | La cadena **con pooling** pero con el usuario `vitalis_app` y su contraseña (paso 4) |
 | `DATABASE_URL_ADMIN` | La cadena **con pooling** con el usuario `vitalis_admin` y su contraseña (paso 4) |
+| `DATABASE_URL_CUENTA` | La cadena **con pooling** con el usuario `vitalis_cuenta` y su contraseña (paso 4) |
 | `IP_HASH_SALT` | Un texto aleatorio (paso 4) |
 | `SUPERADMIN_EMAIL` | Tu correo para entrar al panel |
 
@@ -90,19 +91,20 @@ Para empezar basta con `DATABASE_URL_MIGRACIONES`; las demás se completan en el
    pnpm db:migrate
    ```
 
-   Debe terminar con "Permisos sincronizados: 4 en el catálogo".
+   Debe terminar con "Permisos sincronizados: 24 en el catálogo".
 
-2. **Genera tres textos aleatorios:** dos contraseñas y la sal. Ejecuta este comando tres veces y guarda cada resultado:
+2. **Genera cuatro textos aleatorios:** tres contraseñas y la sal. Ejecuta este comando cuatro veces y guarda cada resultado:
 
    ```bash
    node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
    ```
 
-3. **Dale contraseña a los dos usuarios de la web.** En Neon, abre **SQL Editor** y ejecuta, cambiando cada contraseña por una de las generadas:
+3. **Dale contraseña a los tres usuarios de la web.** En Neon, abre **SQL Editor** y ejecuta, cambiando cada contraseña por una de las generadas:
 
    ```sql
    ALTER ROLE vitalis_app WITH LOGIN PASSWORD 'contraseña-1';
    ALTER ROLE vitalis_admin WITH LOGIN PASSWORD 'contraseña-2';
+   ALTER ROLE vitalis_cuenta WITH LOGIN PASSWORD 'contraseña-3';
    ```
 
 4. **Completa el `.env`.** Toma tu cadena **con pooling** (la que tiene `-pooler`), cambia `neondb_owner` por el usuario y pon su contraseña:
@@ -110,7 +112,8 @@ Para empezar basta con `DATABASE_URL_MIGRACIONES`; las demás se completan en el
    ```bash
    DATABASE_URL="postgresql://vitalis_app:contraseña-1@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
    DATABASE_URL_ADMIN="postgresql://vitalis_admin:contraseña-2@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
-   IP_HASH_SALT="el-tercer-texto"
+   DATABASE_URL_CUENTA="postgresql://vitalis_cuenta:contraseña-3@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
+   IP_HASH_SALT="el-cuarto-texto"
    SUPERADMIN_EMAIL="tu-correo@ejemplo.com"
    ```
 
@@ -144,6 +147,7 @@ Qué probar:
 | `http://localhost:4321/tienda` | La tienda: filtros, fichas y "Agregar" |
 | `http://localhost:4321/pedido` | Tu pedido: cantidades, datos y envío |
 | `http://localhost:4321/cita` | Solicitar una cita: se guarda y te lleva a WhatsApp con el mensaje |
+| `http://localhost:4321/cuenta/registro` | Crear una cuenta de cliente; luego `/cuenta` muestra sus pedidos y citas |
 | `http://localhost:4321/admin/login` | El panel: entra con tu correo y la contraseña temporal; te pedirá cambiarla |
 
 En el panel puedes crear un rol (Roles > Nuevo rol), crear un usuario con ese rol (Usuarios) y entrar con él en otra ventana de incógnito para ver qué puede hacer.

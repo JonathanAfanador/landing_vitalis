@@ -2,10 +2,11 @@ import type { AstroCookies } from 'astro';
 import { and, count, eq, gt, sql } from 'drizzle-orm';
 import { dbAdmin } from '../db/client-admin';
 import { auditoria, usuarios } from '../db/schema';
-import { HASH_FALSO, hashClave, verificarClave } from '../lib/clave';
+import { HASH_FALSO, hashClave, validarClaveNueva, verificarClave } from '../lib/clave';
 import { hashCorreo, hashIp } from '../lib/ip';
 import { registrar } from './auditoria';
-import { crearSesion } from './sesiones';
+import type { UsuarioSesion } from './autorizacion';
+import { cerrarTodasLasSesiones, crearSesion } from './sesiones';
 import { buscarParaLogin } from './usuarios';
 
 export const MAX_FALLOS_CUENTA = 5;
@@ -68,4 +69,41 @@ export async function intentarLogin(email: string, clave: string, ip: string, co
   await crearSesion(usuario.id, cookies);
   await registrar({ actorId: usuario.id, evento: 'login_ok', ipHash, sujetoHash });
   return true;
+}
+
+// Cambio de la propia contraseña (panel y portal). Devuelve el problema para mostrarlo, o null si se cambió.
+// Cierra las demás sesiones abiertas con la contraseña anterior y renueva la actual.
+export async function cambiarClavePropia(
+  usuario: UsuarioSesion,
+  claves: { actual: string; nueva: string; confirmacion: string },
+  cookies: AstroCookies,
+) {
+  const { actual, nueva, confirmacion } = claves;
+  const problema =
+    validarClaveNueva(nueva, usuario.email) ??
+    (nueva !== confirmacion ? 'Las contraseñas nuevas no coinciden.' : null) ??
+    (nueva === actual ? 'La contraseña nueva debe ser distinta de la actual.' : null);
+  if (problema) return problema;
+
+  const [fila] = await dbAdmin
+    .select({ claveHash: usuarios.claveHash })
+    .from(usuarios)
+    .where(eq(usuarios.id, usuario.id));
+  if (!fila || !(await verificarClave(actual, fila.claveHash)).valida) {
+    return 'La contraseña actual no es correcta.';
+  }
+
+  await dbAdmin
+    .update(usuarios)
+    .set({ claveHash: await hashClave(nueva), debeCambiarClave: false })
+    .where(eq(usuarios.id, usuario.id));
+  await cerrarTodasLasSesiones(usuario.id);
+  await crearSesion(usuario.id, cookies);
+  await registrar({
+    actorId: usuario.id,
+    evento: 'clave_cambiada',
+    entidad: 'usuario',
+    entidadId: usuario.id,
+  });
+  return null;
 }

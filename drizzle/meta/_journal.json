@@ -71,6 +71,20 @@
       "when": 1795744704465,
       "tag": "0009_permisos_eliminacion",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795788991410,
+      "tag": "0010_portal_clientes",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1795789022497,
+      "tag": "0011_rol_cuenta_y_rls",
+      "breakpoints": true
     }
   ]
 }

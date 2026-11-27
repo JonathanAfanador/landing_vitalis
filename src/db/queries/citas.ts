@@ -23,7 +23,7 @@ const esCodigoRepetido = (error: unknown) =>
   (error.cause as { constraint?: string } | undefined)?.constraint === 'solicitudes_cita_codigo_unique';
 
 // Guarda la solicitud y devuelve lo que necesita el mensaje de WhatsApp. Si la especie no existe, null.
-export async function crearCita(datos: DatosCita, ipHash: string) {
+export async function crearCita(datos: DatosCita, ipHash: string, usuarioId: number | null = null) {
   const [especie] = await db
     .select({ id: especies.id })
     .from(especies)
@@ -46,6 +46,7 @@ export async function crearCita(datos: DatosCita, ipHash: string) {
           franja: datos.franja ?? null,
           aceptaTratamientoDatos: datos.aceptaDatos,
           ipHash,
+          usuarioId,
         })
         .returning({ codigo: solicitudesCita.codigo });
       if (!cita) throw new Error('No se pudo guardar la solicitud de cita');

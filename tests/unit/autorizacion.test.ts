@@ -17,6 +17,7 @@ const usuario = (permisos: string[], extra: Partial<UsuarioSesion> = {}): Usuari
   rolId: 5,
   rolSlug: 'personalizado',
   rolNombre: 'Personalizado',
+  telefono: null,
   esSuperadmin: false,
   permisos: new Set(permisos),
   debeCambiarClave: false,
@@ -72,6 +73,14 @@ describe('puedeEntrarAlPanel', () => {
     expect(puedeEntrarAlPanel(usuario([]))).toBe(false);
     expect(puedeEntrarAlPanel(usuario(['auditoria:ver']))).toBe(true);
     expect(puedeEntrarAlPanel(superadmin)).toBe(true);
+  });
+
+  it('los permisos de "Mi cuenta" no abren el panel', () => {
+    expect(puedeEntrarAlPanel(usuario(['cuenta:ver_pedidos', 'cuenta:editar_perfil']))).toBe(false);
+  });
+
+  it('una cuenta de cliente nunca entra, aunque le asignen permisos del panel', () => {
+    expect(puedeEntrarAlPanel(usuario(['pedidos:ver'], { rolSlug: 'usuario' }))).toBe(false);
   });
 });
 
@@ -147,6 +156,20 @@ describe('puedeGestionarUsuario', () => {
     expect(
       puedeGestionarUsuario(gestor, { id: 20, rol: rol('lector', ['usuarios:ver']) }, 'desactivar').ok,
     ).toBe(true);
+  });
+});
+
+describe('cuentas de clientes', () => {
+  it('se gestionan con permisos propios, no con los de usuarios del panel', () => {
+    expect(can(usuario(['clientes:ver', 'clientes:gestionar']), 'clientes:gestionar')).toBe(true);
+    expect(can(usuario(['usuarios:ver', 'usuarios:gestionar']), 'clientes:gestionar')).toBe(false);
+  });
+
+  it('gestionar clientes no da acceso a gestionar usuarios del panel', () => {
+    const gestor = usuario(['clientes:ver', 'clientes:gestionar']);
+    expect(
+      puedeGestionarUsuario(gestor, { id: 60, rol: rol('admin', ['pedidos:ver']) }, 'restablecer').ok,
+    ).toBe(false);
   });
 });
 

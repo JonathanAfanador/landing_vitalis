@@ -2,9 +2,12 @@ import { ActionError, defineAction } from 'astro:actions';
 import { auth } from './admin/auth';
 import { catalogoAdmin } from './admin/catalogo';
 import { citasAdmin } from './admin/citas';
+import { clientesAdmin } from './admin/clientes';
 import { pedidosAdmin } from './admin/pedidos';
 import { rolesAdmin } from './admin/roles';
 import { usuariosAdmin } from './admin/usuarios';
+import { esCliente } from '../admin/autorizacion';
+import { cuenta } from './cuenta';
 import { z } from 'astro/zod';
 import { protegerErrores } from '../lib/acciones';
 import { citasRecientes, crearCita } from '../db/queries/citas';
@@ -17,6 +20,8 @@ import { datosCitaSchema, datosPedidoSchema, SLUG } from '../lib/validacion';
 
 const MAX_PEDIDOS_POR_IP = 5;
 const MAX_CITAS_POR_IP = 3;
+// La cuenta a la que se liga un pedido o una cita: solo clientes; el personal de la clínica no.
+const cuentaDe = (usuario: App.Locals['usuario']) => (usuario && esCliente(usuario) ? usuario.id : null);
 const slug = z.string().max(140).regex(SLUG);
 const cantidad = (minimo: number) => z.coerce.number().int().min(minimo).max(MAX_CANTIDAD);
 
@@ -29,7 +34,11 @@ export const server = {
     ...catalogoAdmin,
     pedidos: pedidosAdmin,
     citas: citasAdmin,
+    clientes: clientesAdmin,
   },
+
+  // Portal de clientes (/cuenta).
+  cuenta,
 
   // El carrito vive en una cookie HttpOnly. Son formularios: funcionan también sin JavaScript.
   carrito: {
@@ -88,6 +97,7 @@ export const server = {
         }
 
         try {
+          // Con sesión de cliente, el pedido queda en su cuenta (lo ve en /cuenta).
           const pedido = await crearPedido(
             {
               nombre: datos.nombre,
@@ -99,6 +109,7 @@ export const server = {
               items,
             },
             ipHash,
+            cuentaDe(ctx.locals.usuario),
           );
           vaciarCarrito(ctx.cookies);
           return pedido;
@@ -133,7 +144,7 @@ export const server = {
           });
         }
 
-        const cita = await crearCita(datos, ipHash);
+        const cita = await crearCita(datos, ipHash, cuentaDe(ctx.locals.usuario));
         if (!cita) {
           throw new ActionError({ code: 'BAD_REQUEST', message: 'Elige qué tipo de mascota es.' });
         }

@@ -1,4 +1,4 @@
-import { PERMISOS, esCodigoPermiso, type Capacidad, type CodigoPermiso } from './permisos';
+import { PERMISOS, esCodigoPermiso, esPermisoDePanel, type Capacidad, type CodigoPermiso } from './permisos';
 
 export type UsuarioSesion = {
   id: number;
@@ -7,6 +7,7 @@ export type UsuarioSesion = {
   rolId: number;
   rolSlug: string;
   rolNombre: string;
+  telefono: string | null;
   esSuperadmin: boolean;
   permisos: ReadonlySet<string>;
   debeCambiarClave: boolean;
@@ -29,9 +30,12 @@ export function can(usuario: UsuarioSesion | null | undefined, capacidad: Capaci
 const tieneTodos = (usuario: UsuarioSesion, codigos: readonly string[]) =>
   codigos.every((c) => esCodigoPermiso(c) && can(usuario, c));
 
-// Acceso al panel: superadmin o al menos un permiso del catálogo del panel.
+// Acceso al panel: superadmin o al menos un permiso del panel (los de "Mi cuenta" no cuentan).
+// Las cuentas de clientes nunca entran, aunque alguien les asigne permisos del panel por error.
 export const puedeEntrarAlPanel = (usuario: UsuarioSesion) =>
-  usuario.esSuperadmin || [...usuario.permisos].some(esCodigoPermiso);
+  usuario.rolSlug !== 'usuario' && (usuario.esSuperadmin || [...usuario.permisos].some(esPermisoDePanel));
+
+export const esCliente = (usuario: UsuarioSesion | null | undefined) => usuario?.rolSlug === 'usuario';
 
 // Normaliza los permisos de un rol: descarta códigos desconocidos y añade sus dependencias.
 export function normalizarPermisos(codigos: readonly string[]): CodigoPermiso[] {

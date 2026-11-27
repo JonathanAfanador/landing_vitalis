@@ -30,7 +30,7 @@ const esCodigoRepetido = (error: unknown) =>
 
 // Crea el pedido en una sola transacción corta: bloquea los medicamentos (en orden de id, para no
 // provocar interbloqueos), recalcula con los precios de la base de datos, guarda y descuenta stock.
-async function intentarPedido(datos: DatosPedido, ipHash: string) {
+async function intentarPedido(datos: DatosPedido, ipHash: string, usuarioId: number | null) {
   return db.transaction(async (tx) => {
     const filas = await tx
       .select({
@@ -68,6 +68,7 @@ async function intentarPedido(datos: DatosPedido, ipHash: string) {
         declaraFormula: datos.declaraFormula,
         aceptaTratamientoDatos: datos.aceptaDatos,
         ipHash,
+        usuarioId,
       })
       .returning({ id: pedidos.id, codigo: pedidos.codigo });
     if (!pedido) throw new Error('No se pudo guardar el pedido');
@@ -96,11 +97,11 @@ async function intentarPedido(datos: DatosPedido, ipHash: string) {
   });
 }
 
-export async function crearPedido(datos: DatosPedido, ipHash: string) {
+export async function crearPedido(datos: DatosPedido, ipHash: string, usuarioId: number | null = null) {
   // Un código repetido es casi imposible (32^6 combinaciones), pero si pasa se reintenta.
   for (let intento = 1; ; intento++) {
     try {
-      return await intentarPedido(datos, ipHash);
+      return await intentarPedido(datos, ipHash, usuarioId);
     } catch (error) {
       if (intento < 3 && esCodigoRepetido(error)) continue;
       throw error;

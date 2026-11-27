@@ -8,7 +8,7 @@ import Pending from '../components/ui/Pending.astro';
 import { contacto } from '../data/vitalis';
 import { medicamentosParaPedido } from '../db/queries/medicamentos';
 import { leerCarrito } from '../lib/carrito-cookies';
-import { formatoCOP } from '../lib/formato';
+import { formatoCOP, formatoTelefono } from '../lib/formato';
 import { calcularPedido } from '../lib/pedido';
 import { registrarError } from '../lib/registro';
 import { enlaceWhatsApp, mensajePedido } from '../lib/whatsapp';
@@ -28,7 +28,15 @@ const errorGeneral =
   (envio?.error && !isInputError(envio.error) ? envio.error.message : null) ?? cambio?.error?.message;
 // Si el envío falló, se vuelven a rellenar los campos con lo que se escribió.
 const enviado = envio?.error ? await Astro.request.formData() : null;
-const valor = (campo: string) => String(enviado?.get(campo) ?? '') || undefined;
+// Con sesión de cliente, el formulario viene prellenado y lo enviado queda en su cuenta.
+const cliente = Astro.locals.usuario?.rolSlug === 'usuario' ? Astro.locals.usuario : null;
+const DE_LA_CUENTA: Record<string, string | null | undefined> = {
+  nombre: cliente?.nombre,
+  telefono: cliente?.telefono && formatoTelefono(cliente.telefono),
+  email: cliente?.email,
+};
+const valor = (campo: string) =>
+  (enviado ? String(enviado.get(campo) ?? '') : (DE_LA_CUENTA[campo] ?? '')) || undefined;
 const primerError = (campo: keyof typeof errores) => errores[campo]?.[0];
 
 const items = pedido ? [] : leerCarrito(Astro.cookies);
@@ -89,8 +97,8 @@ const filas = calculo
               Confirmar por WhatsApp
             </a>
           )}
-          <a href="/tienda" class="btn-borde">
-            Volver a la tienda
+          <a href={cliente ? '/cuenta' : '/tienda'} class="btn-borde">
+            {cliente ? 'Ver en mi cuenta' : 'Volver a la tienda'}
           </a>
         </div>
         {!whatsapp && <Pending dato="número de WhatsApp para el botón de confirmación" class="mt-4" />}
@@ -305,6 +313,25 @@ const filas = calculo
             >
               Enviar pedido
             </button>
+            <p class="caption-5 text-center text-tinta-600">
+              {cliente ? (
+                <>
+                  Quedará guardado en{' '}
+                  <a href="/cuenta" class="underline underline-offset-4">
+                    tu cuenta
+                  </a>
+                  .
+                </>
+              ) : (
+                <>
+                  ¿Tienes cuenta?{' '}
+                  <a href="/cuenta/ingresar?volver=/pedido" class="underline underline-offset-4">
+                    Ingresa
+                  </a>{' '}
+                  para guardarlo en tu historial y no escribir tus datos.
+                </>
+              )}
+            </p>
             {calculo.problemas.length > 0 && (
               <p class="body-6 text-error-700">
                 Ajusta los medicamentos marcados en rojo para poder enviar el pedido.

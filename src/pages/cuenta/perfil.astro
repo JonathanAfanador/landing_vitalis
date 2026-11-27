@@ -1,0 +1,174 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import CuentaLayout from '../../layouts/CuentaLayout.astro';
+import Aviso from '../../components/ui/Aviso.astro';
+import Campo from '../../components/formularios/Campo.astro';
+import { can, esCliente, puedeEntrarAlPanel } from '../../admin/autorizacion';
+import { miPerfil } from '../../cuenta/datos';
+import { formatoTelefono } from '../../lib/formato';
+
+export const prerender = false;
+
+const usuario = Astro.locals.usuario;
+if (!usuario) return Astro.redirect('/cuenta/ingresar', 303);
+if (!esCliente(usuario)) return Astro.redirect(puedeEntrarAlPanel(usuario) ? '/admin' : '/', 303);
+
+const datos = Astro.getActionResult(actions.cuenta.actualizarPerfil);
+const clave = Astro.getActionResult(actions.cuenta.cambiarClave);
+const eliminar = Astro.getActionResult(actions.cuenta.eliminar);
+if (datos?.data) return Astro.redirect('/cuenta/perfil?ok=datos', 303);
+if (clave?.data) return Astro.redirect('/cuenta/perfil?ok=clave', 303);
+if (eliminar?.data) return Astro.redirect('/cuenta/ingresar?eliminada=1', 303);
+
+const perfil = await miPerfil(usuario.id);
+if (!perfil) return Astro.redirect('/cuenta/ingresar', 303);
+
+const editaPerfil = can(usuario, 'cuenta:editar_perfil');
+const puedeEliminar = can(usuario, 'cuenta:eliminar');
+const erroresDatos = datos?.error && isInputError(datos.error) ? datos.error.fields : {};
+const enviadoDatos = datos?.error ? await Astro.request.formData() : null;
+const valorDatos = (campo: 'nombre' | 'telefono', actual: string) =>
+  String(enviadoDatos?.get(campo) ?? actual) || undefined;
+const desde = new Intl.DateTimeFormat('es-CO', { dateStyle: 'long', timeZone: 'America/Bogota' });
+const ok = Astro.url.searchParams.get('ok');
+const tarjeta = 'rounded-3xl border border-azul-900/10 p-6';
+---
+
+<CuentaLayout titulo="Mi perfil">
+  <div class="flex flex-col gap-3">
+    {usuario.debeCambiarClave && (
+      <Aviso tipo="error">
+        Entraste con una contraseña temporal que te dio la clínica. Cámbiala para seguir usando tu cuenta.
+      </Aviso>
+    )}
+    {ok === 'datos' && <Aviso tipo="exito">Guardamos tus datos.</Aviso>}
+    {ok === 'clave' && (
+      <Aviso tipo="exito">Cambiamos tu contraseña. Cerramos tus otras sesiones abiertas.</Aviso>
+    )}
+    {datos?.error && !isInputError(datos.error) && <Aviso tipo="error">{datos.error.message}</Aviso>}
+  </div>
+
+  <div class="mt-6 grid gap-6 lg:grid-cols-2 lg:items-start">
+    <section aria-labelledby="titulo-datos" class={tarjeta}>
+      <h2 id="titulo-datos" class="heading-5">
+        Mis datos
+      </h2>
+      <p class="body-6 mt-1 text-tinta-600">
+        {perfil.email} · Cliente desde el {desde.format(perfil.desde)}
+      </p>
+      {editaPerfil ? (
+        <form method="POST" action={actions.cuenta.actualizarPerfil} class="mt-6 flex flex-col gap-4">
+          <Campo
+            name="nombre"
+            etiqueta="Nombre"
+            autocomplete="name"
+            required
+            minlength={2}
+            maxlength={80}
+            value={valorDatos('nombre', perfil.nombre)}
+            error={erroresDatos.nombre?.[0]}
+          />
+          <Campo
+            name="telefono"
+            etiqueta="Celular o WhatsApp"
+            type="tel"
+            inputmode="tel"
+            autocomplete="tel-national"
+            required
+            maxlength={20}
+            value={valorDatos('telefono', perfil.telefono ? formatoTelefono(perfil.telefono) : '')}
+            error={erroresDatos.telefono?.[0]}
+          />
+          <p class="caption-5 text-tinta-600">El correo no se puede cambiar. Si lo necesitas, escríbenos.</p>
+          <button type="submit" class="btn-principal self-start">
+            Guardar datos
+          </button>
+        </form>
+      ) : (
+        <p class="body-3 mt-4">
+          {perfil.nombre} · {perfil.telefono && formatoTelefono(perfil.telefono)}
+        </p>
+      )}
+    </section>
+
+    {editaPerfil && (
+      <section aria-labelledby="titulo-clave" class={tarjeta} id="clave">
+        <h2 id="titulo-clave" class="heading-5">
+          Contraseña
+        </h2>
+        {clave?.error && (
+          <Aviso tipo="error" class="mt-4">
+            {clave.error.message}
+          </Aviso>
+        )}
+        <form method="POST" action={actions.cuenta.cambiarClave} class="mt-6 flex flex-col gap-4">
+          <Campo
+            name="actual"
+            etiqueta={usuario.debeCambiarClave ? 'Contraseña temporal' : 'Contraseña actual'}
+            type="password"
+            autocomplete="current-password"
+            required
+          />
+          <Campo
+            name="nueva"
+            etiqueta="Contraseña nueva"
+            type="password"
+            autocomplete="new-password"
+            required
+            minlength={12}
+            maxlength={128}
+            ayuda="Mínimo 12 caracteres."
+          />
+          <Campo
+            name="confirmacion"
+            etiqueta="Repite la contraseña nueva"
+            type="password"
+            autocomplete="new-password"
+            required
+            maxlength={128}
+          />
+          <button type="submit" class="btn-principal self-start">
+            Cambiar contraseña
+          </button>
+        </form>
+      </section>
+    )}
+  </div>
+
+  {puedeEliminar && !usuario.debeCambiarClave && (
+    <section aria-labelledby="titulo-eliminar" class="mt-12 rounded-3xl border border-error-700/30 p-6">
+      <h2 id="titulo-eliminar" class="heading-5 text-error-700">
+        Eliminar mi cuenta
+      </h2>
+      <p class="body-6 mt-2 max-w-2xl text-tinta-600">
+        Borramos tu nombre, correo y celular de la cuenta y de tus pedidos y citas, y cancelamos las citas que
+        no se hayan atendido. Los pedidos se conservan sin tus datos porque son registro de ventas. No se
+        puede deshacer.
+      </p>
+      {eliminar?.error && (
+        <Aviso tipo="error" class="mt-4">
+          {eliminar.error.message}
+        </Aviso>
+      )}
+      <form method="POST" action={actions.cuenta.eliminar} class="mt-6 flex max-w-md flex-col gap-4">
+        <Campo
+          name="clave"
+          etiqueta="Tu contraseña, para confirmar"
+          type="password"
+          autocomplete="current-password"
+          required
+        />
+        <label class="body-6 flex gap-3">
+          <input type="checkbox" name="entiendo" required class="mt-0.5 size-5 shrink-0 accent-error-700" />
+          Entiendo que mi cuenta y mis datos se eliminan para siempre.
+        </label>
+        <button
+          type="submit"
+          class="btn min-h-11 self-start border border-error-700/40 px-4 text-error-700 hover:bg-error-700/10"
+        >
+          Eliminar mi cuenta
+        </button>
+      </form>
+    </section>
+  )}
+</CuentaLayout>

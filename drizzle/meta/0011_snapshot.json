@@ -1,0 +1,1694 @@
+{
+  "id": "faf45603-8535-44d8-8110-bf4d0c70068e",
+  "prevId": "504931b6-1598-4899-b2c9-0c72a7774144",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "vitalis.auditoria": {
+      "name": "auditoria",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "auditoria_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "actor_id": {
+          "name": "actor_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evento": {
+          "name": "evento",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entidad": {
+          "name": "entidad",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entidad_id": {
+          "name": "entidad_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sujeto_hash": {
+          "name": "sujeto_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detalle": {
+          "name": "detalle",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "auditoria_created_at_id_idx": {
+          "name": "auditoria_created_at_id_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "auditoria_actor_id_idx": {
+          "name": "auditoria_actor_id_idx",
+          "columns": [
+            {
+              "expression": "actor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "auditoria_login_idx": {
+          "name": "auditoria_login_idx",
+          "columns": [
+            {
+              "expression": "evento",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sujeto_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "auditoria_login_ip_idx": {
+          "name": "auditoria_login_ip_idx",
+          "columns": [
+            {
+              "expression": "evento",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ip_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "auditoria_actor_id_usuarios_id_fk": {
+          "name": "auditoria_actor_id_usuarios_id_fk",
+          "tableFrom": "auditoria",
+          "columnsFrom": ["actor_id"],
+          "tableTo": "usuarios",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "auditoria_evento_valido": {
+          "name": "auditoria_evento_valido",
+          "value": "evento in ('login_ok', 'login_fallido', 'logout', 'cuenta_creada', 'cuenta_eliminada', 'clave_cambiada', 'clave_restablecida', 'usuario_creado', 'usuario_desactivado', 'usuario_reactivado', 'rol_asignado', 'rol_creado', 'rol_editado', 'rol_eliminado', 'permisos_rol_cambiados', 'medicamento_creado', 'medicamento_editado', 'medicamento_eliminado', 'stock_ajustado', 'categoria_creada', 'categoria_editada', 'categoria_eliminada', 'pedido_estado_cambiado', 'pedido_eliminado', 'pedido_restaurado', 'pedidos_exportados', 'cita_estado_cambiado', 'cita_eliminada', 'cita_restaurada', 'citas_exportadas')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.categorias": {
+      "name": "categorias",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "categorias_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "categorias_nombre_unique": {
+          "name": "categorias_nombre_unique",
+          "columns": ["nombre"],
+          "nullsNotDistinct": false
+        },
+        "categorias_slug_unique": {
+          "name": "categorias_slug_unique",
+          "columns": ["slug"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "categorias_slug_formato": {
+          "name": "categorias_slug_formato",
+          "value": "\"vitalis\".\"categorias\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.especies": {
+      "name": "especies",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "especies_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "especies_nombre_unique": {
+          "name": "especies_nombre_unique",
+          "columns": ["nombre"],
+          "nullsNotDistinct": false
+        },
+        "especies_slug_unique": {
+          "name": "especies_slug_unique",
+          "columns": ["slug"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "especies_slug_formato": {
+          "name": "especies_slug_formato",
+          "value": "\"vitalis\".\"especies\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.medicamento_especie": {
+      "name": "medicamento_especie",
+      "schema": "vitalis",
+      "columns": {
+        "medicamento_id": {
+          "name": "medicamento_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "especie_id": {
+          "name": "especie_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "medicamento_especie_especie_id_idx": {
+          "name": "medicamento_especie_especie_id_idx",
+          "columns": [
+            {
+              "expression": "especie_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "medicamento_especie_medicamento_id_medicamentos_id_fk": {
+          "name": "medicamento_especie_medicamento_id_medicamentos_id_fk",
+          "tableFrom": "medicamento_especie",
+          "columnsFrom": ["medicamento_id"],
+          "tableTo": "medicamentos",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "medicamento_especie_especie_id_especies_id_fk": {
+          "name": "medicamento_especie_especie_id_especies_id_fk",
+          "tableFrom": "medicamento_especie",
+          "columnsFrom": ["especie_id"],
+          "tableTo": "especies",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "medicamento_especie_medicamento_id_especie_id_pk": {
+          "name": "medicamento_especie_medicamento_id_especie_id_pk",
+          "columns": ["medicamento_id", "especie_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "vitalis.medicamentos": {
+      "name": "medicamentos",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "medicamentos_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "principio_activo": {
+          "name": "principio_activo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "presentacion": {
+          "name": "presentacion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "laboratorio": {
+          "name": "laboratorio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "registro_ica": {
+          "name": "registro_ica",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requiere_formula": {
+          "name": "requiere_formula",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "precio_cop": {
+          "name": "precio_cop",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stock": {
+          "name": "stock",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "imagen": {
+          "name": "imagen",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categoria_id": {
+          "name": "categoria_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "medicamentos_categoria_id_idx": {
+          "name": "medicamentos_categoria_id_idx",
+          "columns": [
+            {
+              "expression": "categoria_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "medicamentos_activos_nombre_idx": {
+          "name": "medicamentos_activos_nombre_idx",
+          "columns": [
+            {
+              "expression": "nombre",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "where": "\"vitalis\".\"medicamentos\".\"activo\"",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "medicamentos_categoria_id_categorias_id_fk": {
+          "name": "medicamentos_categoria_id_categorias_id_fk",
+          "tableFrom": "medicamentos",
+          "columnsFrom": ["categoria_id"],
+          "tableTo": "categorias",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "medicamentos_slug_unique": {
+          "name": "medicamentos_slug_unique",
+          "columns": ["slug"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "medicamentos_slug_formato": {
+          "name": "medicamentos_slug_formato",
+          "value": "\"vitalis\".\"medicamentos\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        },
+        "medicamentos_nombre_largo": {
+          "name": "medicamentos_nombre_largo",
+          "value": "char_length(\"vitalis\".\"medicamentos\".\"nombre\") between 2 and 120"
+        },
+        "medicamentos_precio_positivo": {
+          "name": "medicamentos_precio_positivo",
+          "value": "\"vitalis\".\"medicamentos\".\"precio_cop\" > 0"
+        },
+        "medicamentos_stock_no_negativo": {
+          "name": "medicamentos_stock_no_negativo",
+          "value": "\"vitalis\".\"medicamentos\".\"stock\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.pedido_items": {
+      "name": "pedido_items",
+      "schema": "vitalis",
+      "columns": {
+        "pedido_id": {
+          "name": "pedido_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "medicamento_id": {
+          "name": "medicamento_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cantidad": {
+          "name": "cantidad",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "precio_unitario_cop": {
+          "name": "precio_unitario_cop",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "pedido_items_medicamento_id_idx": {
+          "name": "pedido_items_medicamento_id_idx",
+          "columns": [
+            {
+              "expression": "medicamento_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "pedido_items_pedido_id_pedidos_id_fk": {
+          "name": "pedido_items_pedido_id_pedidos_id_fk",
+          "tableFrom": "pedido_items",
+          "columnsFrom": ["pedido_id"],
+          "tableTo": "pedidos",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "pedido_items_medicamento_id_medicamentos_id_fk": {
+          "name": "pedido_items_medicamento_id_medicamentos_id_fk",
+          "tableFrom": "pedido_items",
+          "columnsFrom": ["medicamento_id"],
+          "tableTo": "medicamentos",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pedido_items_pedido_id_medicamento_id_pk": {
+          "name": "pedido_items_pedido_id_medicamento_id_pk",
+          "columns": ["pedido_id", "medicamento_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "pedido_items_cantidad": {
+          "name": "pedido_items_cantidad",
+          "value": "\"vitalis\".\"pedido_items\".\"cantidad\" between 1 and 99"
+        },
+        "pedido_items_precio_positivo": {
+          "name": "pedido_items_precio_positivo",
+          "value": "\"vitalis\".\"pedido_items\".\"precio_unitario_cop\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.pedidos": {
+      "name": "pedidos",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "pedidos_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre_cliente": {
+          "name": "nombre_cliente",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "direccion": {
+          "name": "direccion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "municipio": {
+          "name": "municipio",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_pedido",
+          "typeSchema": "vitalis",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pendiente'"
+        },
+        "total_cop": {
+          "name": "total_cop",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "notas": {
+          "name": "notas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "declara_formula": {
+          "name": "declara_formula",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "acepta_tratamiento_datos": {
+          "name": "acepta_tratamiento_datos",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eliminado_en": {
+          "name": "eliminado_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eliminado_por": {
+          "name": "eliminado_por",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pedidos_estado_created_at_idx": {
+          "name": "pedidos_estado_created_at_idx",
+          "columns": [
+            {
+              "expression": "estado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "pedidos_ip_hash_created_at_idx": {
+          "name": "pedidos_ip_hash_created_at_idx",
+          "columns": [
+            {
+              "expression": "ip_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "pedidos_usuario_id_idx": {
+          "name": "pedidos_usuario_id_idx",
+          "columns": [
+            {
+              "expression": "usuario_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "pedidos_usuario_id_usuarios_id_fk": {
+          "name": "pedidos_usuario_id_usuarios_id_fk",
+          "tableFrom": "pedidos",
+          "columnsFrom": ["usuario_id"],
+          "tableTo": "usuarios",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "pedidos_eliminado_por_usuarios_id_fk": {
+          "name": "pedidos_eliminado_por_usuarios_id_fk",
+          "tableFrom": "pedidos",
+          "columnsFrom": ["eliminado_por"],
+          "tableTo": "usuarios",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "pedidos_codigo_unique": {
+          "name": "pedidos_codigo_unique",
+          "columns": ["codigo"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "pedidos_codigo_formato": {
+          "name": "pedidos_codigo_formato",
+          "value": "\"vitalis\".\"pedidos\".\"codigo\" ~ '^VIT-[A-Z2-9]{6}$'"
+        },
+        "pedidos_telefono_formato": {
+          "name": "pedidos_telefono_formato",
+          "value": "\"vitalis\".\"pedidos\".\"telefono\" ~ '^[0-9]{10}$'"
+        },
+        "pedidos_total_no_negativo": {
+          "name": "pedidos_total_no_negativo",
+          "value": "\"vitalis\".\"pedidos\".\"total_cop\" >= 0"
+        },
+        "pedidos_acepta_datos": {
+          "name": "pedidos_acepta_datos",
+          "value": "\"vitalis\".\"pedidos\".\"acepta_tratamiento_datos\""
+        },
+        "pedidos_nombre_largo": {
+          "name": "pedidos_nombre_largo",
+          "value": "char_length(\"vitalis\".\"pedidos\".\"nombre_cliente\") between 2 and 80"
+        },
+        "pedidos_notas_largo": {
+          "name": "pedidos_notas_largo",
+          "value": "char_length(\"vitalis\".\"pedidos\".\"notas\") <= 500"
+        },
+        "pedidos_eliminado_completo": {
+          "name": "pedidos_eliminado_completo",
+          "value": "(\"vitalis\".\"pedidos\".\"eliminado_en\" is null) = (\"vitalis\".\"pedidos\".\"eliminado_por\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.permisos": {
+      "name": "permisos",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "permisos_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "modulo": {
+          "name": "modulo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "datos_personales": {
+          "name": "datos_personales",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "permisos_codigo_unique": {
+          "name": "permisos_codigo_unique",
+          "columns": ["codigo"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "permisos_codigo_formato": {
+          "name": "permisos_codigo_formato",
+          "value": "\"vitalis\".\"permisos\".\"codigo\" ~ '^[a-z_]+:[a-z_]+$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.rol_permiso": {
+      "name": "rol_permiso",
+      "schema": "vitalis",
+      "columns": {
+        "rol_id": {
+          "name": "rol_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "permiso_id": {
+          "name": "permiso_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "rol_permiso_permiso_id_idx": {
+          "name": "rol_permiso_permiso_id_idx",
+          "columns": [
+            {
+              "expression": "permiso_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "rol_permiso_rol_id_roles_id_fk": {
+          "name": "rol_permiso_rol_id_roles_id_fk",
+          "tableFrom": "rol_permiso",
+          "columnsFrom": ["rol_id"],
+          "tableTo": "roles",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "rol_permiso_permiso_id_permisos_id_fk": {
+          "name": "rol_permiso_permiso_id_permisos_id_fk",
+          "tableFrom": "rol_permiso",
+          "columnsFrom": ["permiso_id"],
+          "tableTo": "permisos",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "rol_permiso_rol_id_permiso_id_pk": {
+          "name": "rol_permiso_rol_id_permiso_id_pk",
+          "columns": ["rol_id", "permiso_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "vitalis.roles": {
+      "name": "roles",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "roles_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "es_sistema": {
+          "name": "es_sistema",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "roles_slug_unique": {
+          "name": "roles_slug_unique",
+          "columns": ["slug"],
+          "nullsNotDistinct": false
+        },
+        "roles_nombre_unique": {
+          "name": "roles_nombre_unique",
+          "columns": ["nombre"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "roles_slug_formato": {
+          "name": "roles_slug_formato",
+          "value": "\"vitalis\".\"roles\".\"slug\" ~ '^[a-z0-9]+(-[a-z0-9]+)*$'"
+        },
+        "roles_nombre_largo": {
+          "name": "roles_nombre_largo",
+          "value": "char_length(\"vitalis\".\"roles\".\"nombre\") between 2 and 60"
+        },
+        "roles_descripcion_largo": {
+          "name": "roles_descripcion_largo",
+          "value": "char_length(\"vitalis\".\"roles\".\"descripcion\") <= 300"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.sesiones": {
+      "name": "sesiones",
+      "schema": "vitalis",
+      "columns": {
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expira_en": {
+          "name": "expira_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ultimo_uso": {
+          "name": "ultimo_uso",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "sesiones_usuario_id_idx": {
+          "name": "sesiones_usuario_id_idx",
+          "columns": [
+            {
+              "expression": "usuario_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "sesiones_expira_en_idx": {
+          "name": "sesiones_expira_en_idx",
+          "columns": [
+            {
+              "expression": "expira_en",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "sesiones_usuario_id_usuarios_id_fk": {
+          "name": "sesiones_usuario_id_usuarios_id_fk",
+          "tableFrom": "sesiones",
+          "columnsFrom": ["usuario_id"],
+          "tableTo": "usuarios",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "vitalis.solicitudes_cita": {
+      "name": "solicitudes_cita",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "solicitudes_cita_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre_tutor": {
+          "name": "nombre_tutor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "especie_id": {
+          "name": "especie_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre_mascota": {
+          "name": "nombre_mascota",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "motivo": {
+          "name": "motivo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_preferida": {
+          "name": "fecha_preferida",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "franja": {
+          "name": "franja",
+          "type": "franja_cita",
+          "typeSchema": "vitalis",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estado": {
+          "name": "estado",
+          "type": "estado_cita",
+          "typeSchema": "vitalis",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'solicitada'"
+        },
+        "notas_internas": {
+          "name": "notas_internas",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acepta_tratamiento_datos": {
+          "name": "acepta_tratamiento_datos",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ip_hash": {
+          "name": "ip_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "usuario_id": {
+          "name": "usuario_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eliminada_en": {
+          "name": "eliminada_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eliminada_por": {
+          "name": "eliminada_por",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "solicitudes_cita_estado_created_at_idx": {
+          "name": "solicitudes_cita_estado_created_at_idx",
+          "columns": [
+            {
+              "expression": "estado",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "solicitudes_cita_ip_hash_created_at_idx": {
+          "name": "solicitudes_cita_ip_hash_created_at_idx",
+          "columns": [
+            {
+              "expression": "ip_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "solicitudes_cita_especie_id_idx": {
+          "name": "solicitudes_cita_especie_id_idx",
+          "columns": [
+            {
+              "expression": "especie_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "solicitudes_cita_usuario_id_idx": {
+          "name": "solicitudes_cita_usuario_id_idx",
+          "columns": [
+            {
+              "expression": "usuario_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "solicitudes_cita_especie_id_especies_id_fk": {
+          "name": "solicitudes_cita_especie_id_especies_id_fk",
+          "tableFrom": "solicitudes_cita",
+          "columnsFrom": ["especie_id"],
+          "tableTo": "especies",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "solicitudes_cita_usuario_id_usuarios_id_fk": {
+          "name": "solicitudes_cita_usuario_id_usuarios_id_fk",
+          "tableFrom": "solicitudes_cita",
+          "columnsFrom": ["usuario_id"],
+          "tableTo": "usuarios",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        },
+        "solicitudes_cita_eliminada_por_usuarios_id_fk": {
+          "name": "solicitudes_cita_eliminada_por_usuarios_id_fk",
+          "tableFrom": "solicitudes_cita",
+          "columnsFrom": ["eliminada_por"],
+          "tableTo": "usuarios",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "solicitudes_cita_codigo_unique": {
+          "name": "solicitudes_cita_codigo_unique",
+          "columns": ["codigo"],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "solicitudes_cita_codigo_formato": {
+          "name": "solicitudes_cita_codigo_formato",
+          "value": "\"vitalis\".\"solicitudes_cita\".\"codigo\" ~ '^CIT-[A-Z2-9]{6}$'"
+        },
+        "solicitudes_cita_telefono_formato": {
+          "name": "solicitudes_cita_telefono_formato",
+          "value": "\"vitalis\".\"solicitudes_cita\".\"telefono\" ~ '^[0-9]{10}$'"
+        },
+        "solicitudes_cita_acepta_datos": {
+          "name": "solicitudes_cita_acepta_datos",
+          "value": "\"vitalis\".\"solicitudes_cita\".\"acepta_tratamiento_datos\""
+        },
+        "solicitudes_cita_tutor_largo": {
+          "name": "solicitudes_cita_tutor_largo",
+          "value": "char_length(\"vitalis\".\"solicitudes_cita\".\"nombre_tutor\") between 2 and 80"
+        },
+        "solicitudes_cita_mascota_largo": {
+          "name": "solicitudes_cita_mascota_largo",
+          "value": "char_length(\"vitalis\".\"solicitudes_cita\".\"nombre_mascota\") between 1 and 60"
+        },
+        "solicitudes_cita_motivo_largo": {
+          "name": "solicitudes_cita_motivo_largo",
+          "value": "char_length(\"vitalis\".\"solicitudes_cita\".\"motivo\") between 5 and 500"
+        },
+        "solicitudes_cita_notas_largo": {
+          "name": "solicitudes_cita_notas_largo",
+          "value": "char_length(\"vitalis\".\"solicitudes_cita\".\"notas_internas\") <= 1000"
+        },
+        "solicitudes_cita_eliminada_completa": {
+          "name": "solicitudes_cita_eliminada_completa",
+          "value": "(\"vitalis\".\"solicitudes_cita\".\"eliminada_en\" is null) = (\"vitalis\".\"solicitudes_cita\".\"eliminada_por\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "vitalis.usuarios": {
+      "name": "usuarios",
+      "schema": "vitalis",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "name": "usuarios_id_seq",
+            "increment": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "startWith": "1",
+            "cache": "1",
+            "cycle": false,
+            "schema": "vitalis",
+            "type": "always"
+          }
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clave_hash": {
+          "name": "clave_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rol_id": {
+          "name": "rol_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activo": {
+          "name": "activo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "debe_cambiar_clave": {
+          "name": "debe_cambiar_clave",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "acepta_datos_en": {
+          "name": "acepta_datos_en",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ultimo_acceso": {
+          "name": "ultimo_acceso",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "usuarios_email_unique": {
+          "name": "usuarios_email_unique",
+          "columns": [
+            {
+              "expression": "lower(\"email\")",
+              "isExpression": true,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "usuarios_rol_id_idx": {
+          "name": "usuarios_rol_id_idx",
+          "columns": [
+            {
+              "expression": "rol_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "usuarios_rol_id_roles_id_fk": {
+          "name": "usuarios_rol_id_roles_id_fk",
+          "tableFrom": "usuarios",
+          "columnsFrom": ["rol_id"],
+          "tableTo": "roles",
+          "schemaTo": "vitalis",
+          "columnsTo": ["id"],
+          "onUpdate": "no action",
+          "onDelete": "restrict"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "usuarios_nombre_largo": {
+          "name": "usuarios_nombre_largo",
+          "value": "char_length(\"vitalis\".\"usuarios\".\"nombre\") between 2 and 80"
+        },
+        "usuarios_email_formato": {
+          "name": "usuarios_email_formato",
+          "value": "\"vitalis\".\"usuarios\".\"email\" ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' and char_length(\"vitalis\".\"usuarios\".\"email\") <= 120"
+        },
+        "usuarios_clave_formato": {
+          "name": "usuarios_clave_formato",
+          "value": "\"vitalis\".\"usuarios\".\"clave_hash\" like 'scrypt$%'"
+        },
+        "usuarios_telefono_formato": {
+          "name": "usuarios_telefono_formato",
+          "value": "\"vitalis\".\"usuarios\".\"telefono\" ~ '^[0-9]{10}$'"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "vitalis.estado_cita": {
+      "name": "estado_cita",
+      "schema": "vitalis",
+      "values": ["solicitada", "confirmada", "atendida", "no_asistio", "cancelada"]
+    },
+    "vitalis.estado_pedido": {
+      "name": "estado_pedido",
+      "schema": "vitalis",
+      "values": ["pendiente", "confirmado", "pagado", "entregado", "cancelado"]
+    },
+    "vitalis.franja_cita": {
+      "name": "franja_cita",
+      "schema": "vitalis",
+      "values": ["manana", "tarde"]
+    }
+  },
+  "schemas": {
+    "vitalis": "vitalis"
+  },
+  "views": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

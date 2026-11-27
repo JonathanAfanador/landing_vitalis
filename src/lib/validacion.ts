@@ -79,6 +79,26 @@ export const datosCitaSchema = z.object({
 
 export type DatosCita = z.output<typeof datosCitaSchema>;
 
+// Cuenta de cliente (portal). La contraseña se valida aparte con validarClaveNueva (src/lib/clave.ts).
+const CLAVE_MAX = 128;
+export const datosPerfilSchema = z.object({
+  nombre: datosPedidoSchema.shape.nombre,
+  telefono: datosPedidoSchema.shape.telefono,
+});
+
+export const datosRegistroSchema = datosPerfilSchema.extend({
+  email: z.email('Revisa el correo, parece incompleto.').max(120, 'El correo es demasiado largo.'),
+  clave: z.string({ error: 'Escribe una contraseña.' }).max(CLAVE_MAX),
+  confirmacion: z.string({ error: 'Repite la contraseña.' }).max(CLAVE_MAX),
+  aceptaDatos: datosPedidoSchema.shape.aceptaDatos,
+  sitioWeb: datosPedidoSchema.shape.sitioWeb,
+  volver: z.string().max(200).nullish(),
+});
+
+// Adónde volver después de ingresar o registrarse: solo rutas de este sitio (nada de //otro-sitio.com).
+export const destinoSeguro = (valor: string | null | undefined, porDefecto = '/cuenta') =>
+  valor && /^\/(?![/\\])[\w\-/?=&%.]*$/.test(valor) ? valor : porDefecto;
+
 export type ItemCarrito = { slug: string; cantidad: number };
 export type DatosFormularioPedido = z.output<typeof datosPedidoSchema>;
 export type DatosPedido = Omit<DatosFormularioPedido, 'email' | 'notas' | 'sitioWeb'> & {

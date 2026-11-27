@@ -1,0 +1,147 @@
+---
+import { actions } from 'astro:actions';
+import CuentaLayout from '../../layouts/CuentaLayout.astro';
+import Aviso from '../../components/ui/Aviso.astro';
+import Icono from '../../components/ui/Icono.astro';
+import { can, esCliente, puedeEntrarAlPanel } from '../../admin/autorizacion';
+import { misCitas, misPedidos } from '../../cuenta/datos';
+import { NOMBRE_ESTADO_CITA, NOMBRE_ESTADO_PEDIDO, origenesCita, type EstadoPedido } from '../../lib/estados';
+import { formatoCOP } from '../../lib/formato';
+import { preferenciaCita } from '../../lib/whatsapp';
+
+export const prerender = false;
+
+// El middleware garantiza la sesión. El personal de la clínica no tiene portal: va a su panel.
+const usuario = Astro.locals.usuario;
+if (!usuario) return Astro.redirect('/cuenta/ingresar', 303);
+if (!esCliente(usuario)) return Astro.redirect(puedeEntrarAlPanel(usuario) ? '/admin' : '/', 303);
+
+const cancelacion = Astro.getActionResult(actions.cuenta.cancelarCita);
+if (cancelacion?.data) return Astro.redirect('/cuenta?ok=cancelada', 303);
+
+const vePedidos = can(usuario, 'cuenta:ver_pedidos');
+const veCitas = can(usuario, 'cuenta:ver_citas');
+const cancela = can(usuario, 'cuenta:cancelar_cita');
+const [pedidos, citas] = await Promise.all([
+  vePedidos ? misPedidos(usuario.id) : [],
+  veCitas ? misCitas(usuario.id) : [],
+]);
+
+const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' });
+const EXPLICACION: Record<EstadoPedido, string> = {
+  pendiente: 'Lo estamos revisando. Te escribimos por WhatsApp para confirmarlo.',
+  confirmado: 'Confirmado. Te enviamos por WhatsApp los datos para pagar por transferencia.',
+  pagado: 'Pagado. Te avisamos cuando esté listo para recoger en la clínica.',
+  entregado: 'Entregado.',
+  cancelado: 'Cancelado.',
+};
+const cancelables: readonly string[] = origenesCita('cancelada');
+const etiqueta = 'caption-3 rounded-full bg-arena-100 px-2 py-1';
+---
+
+<CuentaLayout titulo="Mi cuenta">
+  <div class="flex flex-col gap-3">
+    {Astro.url.searchParams.get('ok') === 'cancelada' && <Aviso tipo="exito">Cancelamos tu cita.</Aviso>}
+    {cancelacion?.error && <Aviso tipo="error">{cancelacion.error.message}</Aviso>}
+  </div>
+
+  {vePedidos && (
+    <section aria-labelledby="titulo-pedidos">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h2 id="titulo-pedidos" class="heading-4">
+          Mis pedidos
+        </h2>
+        <a href="/tienda" class="btn-borde">
+          <Icono nombre="shopping-bag" class="size-5" />
+          Ir a la tienda
+        </a>
+      </div>
+      {pedidos.length ? (
+        <ul class="mt-6 flex flex-col gap-4">
+          {pedidos.map((p) => (
+            <li class="rounded-3xl border border-azul-900/10 p-6">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <p class="title-2">{p.codigo}</p>
+                <span class={etiqueta}>{NOMBRE_ESTADO_PEDIDO[p.estado]}</span>
+              </div>
+              <p class="body-6 mt-1 text-tinta-600">
+                {fecha.format(p.fecha)} · {formatoCOP(p.totalCop)}
+              </p>
+              <ul class="body-6 mt-3">
+                {p.lineas.map((l) => (
+                  <li>
+                    {l.cantidad} × {l.nombre}
+                  </li>
+                ))}
+              </ul>
+              <p class="body-6 mt-3 text-tinta-600">{EXPLICACION[p.estado]}</p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="body-3 mt-6 rounded-3xl bg-arena-100 p-6">
+          Aún no tienes pedidos con esta cuenta. Los que hagas con la sesión abierta aparecerán aquí.
+        </p>
+      )}
+    </section>
+  )}
+
+  {veCitas && (
+    <section aria-labelledby="titulo-citas" class="mt-12">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <h2 id="titulo-citas" class="heading-4">
+          Mis citas
+        </h2>
+        <a href="/cita" class="btn-borde">
+          <Icono nombre="calendar-check" class="size-5" />
+          Solicitar cita
+        </a>
+      </div>
+      {citas.length ? (
+        <ul class="mt-6 flex flex-col gap-4">
+          {citas.map((c) => (
+            <li class="rounded-3xl border border-azul-900/10 p-6">
+              <div class="flex flex-wrap items-baseline justify-between gap-2">
+                <p class="title-2">
+                  {c.mascota} <span class="body-6 text-tinta-600">· {c.codigo}</span>
+                </p>
+                <span class={etiqueta}>{NOMBRE_ESTADO_CITA[c.estado]}</span>
+              </div>
+              <p class="body-6 mt-1 text-tinta-600">
+                Pedida el {fecha.format(c.fecha)} · Prefiere: {preferenciaCita(c.fechaPreferida, c.franja)}
+              </p>
+              <p class="body-6 mt-3">{c.motivo}</p>
+              {c.estado === 'solicitada' && (
+                <p class="body-6 mt-3 text-tinta-600">
+                  Te escribimos por WhatsApp para acordar el día y la hora.
+                </p>
+              )}
+              {cancela && cancelables.includes(c.estado) && (
+                <details class="group mt-4">
+                  <summary class="btn min-h-11 w-fit cursor-pointer list-none border border-error-700/40 px-4 text-sm text-error-700 hover:bg-error-700/10 [&::-webkit-details-marker]:hidden">
+                    Cancelar cita
+                  </summary>
+                  <form
+                    method="POST"
+                    action={actions.cuenta.cancelarCita}
+                    class="mt-3 flex flex-wrap items-center gap-3 rounded-2xl bg-error-700/5 p-4"
+                  >
+                    <input type="hidden" name="citaId" value={c.id} />
+                    <p class="body-6">¿Seguro que quieres cancelar la cita de {c.mascota}?</p>
+                    <button type="submit" class="btn min-h-10 bg-error-700 px-4 text-sm text-crema-50">
+                      Sí, cancelar
+                    </button>
+                  </form>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="body-3 mt-6 rounded-3xl bg-arena-100 p-6">
+          Aún no tienes citas con esta cuenta. Las que pidas con la sesión abierta aparecerán aquí.
+        </p>
+      )}
+    </section>
+  )}
+</CuentaLayout>

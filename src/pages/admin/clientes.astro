@@ -1,0 +1,195 @@
+---
+import { actions, isInputError, type ActionError } from 'astro:actions';
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import Aviso from '../../components/ui/Aviso.astro';
+import Paginacion from '../../components/admin/Paginacion.astro';
+import SinPermiso from '../../components/admin/SinPermiso.astro';
+import { can } from '../../admin/autorizacion';
+import { listarClientesPanel } from '../../admin/clientes';
+import { esCuentaEliminada } from '../../admin/cuentas';
+import { permisoDePagina } from '../../admin/guard';
+import { leerPagina, totalPaginas } from '../../admin/paginacion';
+import { formatoTelefono } from '../../lib/formato';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'clientes:ver');
+const resultados = {
+  estado: Astro.getActionResult(actions.admin.clientes.cambiarEstado),
+  clave: Astro.getActionResult(actions.admin.clientes.restablecerClave),
+};
+const errores = Object.values(resultados)
+  .map((r) => r?.error)
+  .filter((e): e is ActionError => Boolean(e))
+  .map((e) => (isInputError(e) ? 'Revisa los datos del formulario.' : e.message));
+const claveTemporal = resultados.clave?.data;
+
+const params = Astro.url.searchParams;
+const q = params.get('q')?.trim().slice(0, 60) ?? '';
+const pagina = leerPagina(params.get('pagina'));
+const { clientes, total } = actor ? await listarClientesPanel({ q, pagina }) : { clientes: [], total: 0 };
+if (actor && pagina > totalPaginas(total)) {
+  const url = new URL(Astro.url);
+  url.searchParams.set('pagina', String(totalPaginas(total)));
+  return Astro.redirect(url.pathname + url.search, 303);
+}
+const gestiona = can(actor, 'clientes:gestionar');
+const fecha = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeZone: 'America/Bogota' });
+---
+
+<AdminLayout titulo="Clientes">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Clientes</h1>
+      <p class="body-6 mt-2 max-w-2xl text-tinta-600">
+        Cuentas creadas en la web. Si un cliente olvidó su contraseña, restablécela y entrégale la temporal
+        por WhatsApp: deberá cambiarla al ingresar.
+      </p>
+
+      <div class="mt-6 flex flex-col gap-3">
+        {errores.map((e) => (
+          <Aviso tipo="error">{e}</Aviso>
+        ))}
+        {resultados.estado?.data && <Aviso tipo="exito">Estado de la cuenta actualizado.</Aviso>}
+        {claveTemporal && (
+          <Aviso tipo="exito">
+            Contraseña temporal de <strong>{claveTemporal.email}</strong>:
+            <code class="mx-1 rounded-md bg-crema-50 px-2 py-0.5 font-mono text-base select-all">
+              {claveTemporal.claveTemporal}
+            </code>
+            Entrégala por WhatsApp. Solo se muestra esta vez y deberá cambiarla al ingresar.
+          </Aviso>
+        )}
+      </div>
+
+      <form method="GET" class="mt-6 flex flex-wrap gap-2" role="search">
+        <label for="buscar-cliente" class="sr-only">
+          Buscar cliente
+        </label>
+        <input
+          id="buscar-cliente"
+          name="q"
+          type="search"
+          value={q}
+          maxlength={60}
+          placeholder="Nombre, correo o celular"
+          class="min-h-11 w-full max-w-sm rounded-full border border-azul-900/20 bg-crema-50 px-4"
+        />
+        <button type="submit" class="btn-borde">
+          Buscar
+        </button>
+        {q && (
+          <a href="/admin/clientes" class="btn-borde">
+            Limpiar
+          </a>
+        )}
+      </form>
+
+      {clientes.length ? (
+        <div class="mt-8 rounded-3xl border border-azul-900/10 md:overflow-x-auto">
+          <table class="block w-full text-left md:table md:min-w-3xl">
+            <thead class="caption-3 hidden bg-arena-100 text-dorado-700 md:table-header-group">
+              <tr>
+                <th scope="col" class="px-4 py-3">
+                  Cliente
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Celular
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Desde
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Pedidos · Citas
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  <span class="sr-only">Acciones</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody class="body-6 block divide-y divide-azul-900/10 md:table-row-group">
+              {clientes.map((c) => {
+                const eliminada = esCuentaEliminada(c.email);
+                return (
+                  <tr class="block py-2 md:table-row md:py-0">
+                    <td class="block px-4 py-1 md:table-cell md:py-3">
+                      <p class="title-3">{c.nombre}</p>
+                      <p class="text-tinta-600">{eliminada ? 'Eliminada por su titular' : c.email}</p>
+                      {!c.activo && !eliminada && (
+                        <span class="caption-3 mt-1 inline-block rounded-full bg-error-700/10 px-2 py-0.5 text-error-700">
+                          Desactivada
+                        </span>
+                      )}
+                      {c.debeCambiarClave && c.activo && (
+                        <span class="caption-3 mt-1 inline-block rounded-full bg-dorado-400/30 px-2 py-0.5">
+                          Contraseña temporal
+                        </span>
+                      )}
+                    </td>
+                    <td class="block px-4 py-1 md:table-cell md:py-3">
+                      {c.telefono ? formatoTelefono(c.telefono) : '—'}
+                    </td>
+                    <td class="block px-4 py-1 text-tinta-600 md:table-cell md:py-3">
+                      {fecha.format(c.desde)}
+                    </td>
+                    <td class="block px-4 py-1 tabular-nums md:table-cell md:py-3">
+                      {c.pedidos} · {c.citas}
+                    </td>
+                    <td class="block px-4 py-2 md:table-cell md:py-3">
+                      {gestiona && !eliminada && (
+                        <div class="flex flex-wrap gap-2 md:justify-end">
+                          {c.activo && (
+                            <form
+                              method="POST"
+                              action={actions.admin.clientes.restablecerClave}
+                              data-confirmar={`¿Restablecer la contraseña de ${c.nombre}? Se cerrarán sus sesiones.`}
+                            >
+                              <input type="hidden" name="usuarioId" value={c.id} />
+                              <button type="submit" class="btn-borde min-h-10 px-3 text-sm">
+                                Restablecer contraseña
+                              </button>
+                            </form>
+                          )}
+                          <form
+                            method="POST"
+                            action={actions.admin.clientes.cambiarEstado}
+                            data-confirmar={
+                              c.activo
+                                ? `¿Desactivar la cuenta de ${c.nombre}? No podrá ingresar y se cerrarán sus sesiones.`
+                                : undefined
+                            }
+                          >
+                            <input type="hidden" name="usuarioId" value={c.id} />
+                            <input type="hidden" name="activo" value={c.activo ? 'no' : 'si'} />
+                            <button
+                              type="submit"
+                              class:list={[
+                                'btn min-h-10 px-3 text-sm',
+                                c.activo
+                                  ? 'border border-error-700/40 text-error-700 hover:bg-error-700/10'
+                                  : 'btn-borde',
+                              ]}
+                            >
+                              {c.activo ? 'Desactivar' : 'Reactivar'}
+                            </button>
+                          </form>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
+          {q ? 'No hay clientes que coincidan con la búsqueda.' : 'Todavía nadie ha creado una cuenta.'}
+        </p>
+      )}
+      <Paginacion pagina={pagina} total={total} nombre={total === 1 ? 'cliente' : 'clientes'} />
+    </>
+  )}
+</AdminLayout>

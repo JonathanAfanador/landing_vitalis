@@ -32,6 +32,13 @@ const enlace = (href: string) => (href.startsWith('#') && !enPortada ? `/${href}
 
     <div class="flex items-center gap-2">
       <a
+        href="/cuenta"
+        class="grid size-11 place-items-center rounded-full transition duration-300 ease-base hover:bg-arena-100"
+        aria-label="Mi cuenta"
+      >
+        <Icono nombre="user-circle" />
+      </a>
+      <a
         href="/pedido"
         class="relative grid size-11 place-items-center rounded-full transition duration-300 ease-base hover:bg-arena-100"
         aria-label="Tu pedido"
@@ -102,6 +109,10 @@ const enlace = (href: string) => (href.startsWith('#') && !enPortada ? `/${href}
     </a>
     <a href={enlace(cta.secundario.href)} class="btn-borde w-full">
       {cta.secundario.texto}
+    </a>
+    <a href="/cuenta" class="btn-borde w-full">
+      <Icono nombre="user-circle" class="size-5" />
+      Mi cuenta
     </a>
   </div>
 </div>

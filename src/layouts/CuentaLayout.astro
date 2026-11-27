@@ -1,0 +1,49 @@
+---
+// Páginas del portal de clientes con sesión: saludo, pestañas y "Salir".
+import { actions } from 'astro:actions';
+import Pagina from './Pagina.astro';
+
+interface Props {
+  titulo: string;
+}
+
+const { titulo } = Astro.props;
+const usuario = Astro.locals.usuario;
+const PESTANAS = [
+  { texto: 'Mis pedidos y citas', href: '/cuenta' },
+  { texto: 'Mi perfil', href: '/cuenta/perfil' },
+];
+---
+
+<Pagina titulo={`${titulo} · Vitalis`} descripcion="Tu cuenta en Vitalis Centro Veterinario." noindex>
+  <div class="mx-auto max-w-5xl">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+      <div>
+        <p class="caption-3 text-dorado-700">Mi cuenta</p>
+        <h1 class="heading-2 mt-3">Hola, {usuario?.nombre.split(' ')[0]}</h1>
+      </div>
+      <form method="POST" action={'/cuenta/ingresar' + actions.cuenta.salir}>
+        <button type="submit" class="btn-borde">
+          Salir
+        </button>
+      </form>
+    </div>
+    <nav
+      aria-label="Secciones de tu cuenta"
+      class="mt-6 flex flex-wrap gap-2 border-b border-azul-900/10 pb-4"
+    >
+      {PESTANAS.map((p) => (
+        <a
+          href={p.href}
+          aria-current={Astro.url.pathname === p.href ? 'page' : undefined}
+          class="btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50"
+        >
+          {p.texto}
+        </a>
+      ))}
+    </nav>
+    <div class="mt-8">
+      <slot />
+    </div>
+  </div>
+</Pagina>

@@ -132,6 +132,10 @@ export const pedidos = vitalis.table(
     declaraFormula: boolean('declara_formula').notNull().default(false),
     aceptaTratamientoDatos: boolean('acepta_tratamiento_datos').notNull(),
     ipHash: text('ip_hash').notNull(),
+    // Cuenta del cliente si lo hizo con sesión (portal). Sin cuenta, queda en null.
+    usuarioId: bigint('usuario_id', { mode: 'number' }).references(() => usuarios.id, {
+      onDelete: 'restrict',
+    }),
     // Eliminación lógica: solo el superadmin. El pedido sale de listados y descargas pero no se borra.
     eliminadoEn: timestamp('eliminado_en', { withTimezone: true }),
     eliminadoPor: bigint('eliminado_por', { mode: 'number' }).references(() => usuarios.id, {
@@ -150,6 +154,7 @@ export const pedidos = vitalis.table(
     check('pedidos_eliminado_completo', sql`(${t.eliminadoEn} is null) = (${t.eliminadoPor} is null)`),
     index('pedidos_estado_created_at_idx').on(t.estado, t.createdAt.desc()),
     index('pedidos_ip_hash_created_at_idx').on(t.ipHash, t.createdAt),
+    index('pedidos_usuario_id_idx').on(t.usuarioId),
   ],
 );
 
@@ -193,6 +198,10 @@ export const solicitudesCita = vitalis.table(
     notasInternas: text('notas_internas'),
     aceptaTratamientoDatos: boolean('acepta_tratamiento_datos').notNull(),
     ipHash: text('ip_hash').notNull(),
+    // Cuenta del tutor si la pidió con sesión (portal). Sin cuenta, queda en null.
+    usuarioId: bigint('usuario_id', { mode: 'number' }).references(() => usuarios.id, {
+      onDelete: 'restrict',
+    }),
     // Eliminación lógica: solo el superadmin. La cita sale de listados y descargas pero no se borra.
     eliminadaEn: timestamp('eliminada_en', { withTimezone: true }),
     eliminadaPor: bigint('eliminada_por', { mode: 'number' }).references(() => usuarios.id, {
@@ -216,6 +225,7 @@ export const solicitudesCita = vitalis.table(
     index('solicitudes_cita_estado_created_at_idx').on(t.estado, t.createdAt.desc()),
     index('solicitudes_cita_ip_hash_created_at_idx').on(t.ipHash, t.createdAt),
     index('solicitudes_cita_especie_id_idx').on(t.especieId),
+    index('solicitudes_cita_usuario_id_idx').on(t.usuarioId),
   ],
 );
 
@@ -282,6 +292,9 @@ export const usuarios = vitalis.table(
       .references(() => roles.id, { onDelete: 'restrict' }),
     activo: boolean('activo').notNull().default(true),
     debeCambiarClave: boolean('debe_cambiar_clave').notNull().default(true),
+    // Solo cuentas de clientes: celular para prellenar pedidos y citas, y cuándo aceptó la Ley 1581.
+    telefono: text('telefono'),
+    aceptaDatosEn: timestamp('acepta_datos_en', { withTimezone: true }),
     ultimoAcceso: timestamp('ultimo_acceso', { withTimezone: true }),
     createdAt: creado(),
     updatedAt: actualizado(),
@@ -295,6 +308,7 @@ export const usuarios = vitalis.table(
       sql`${t.email} ~ '^[^@[:space:]]+@[^@[:space:]]+[.][^@[:space:]]+$' and char_length(${t.email}) <= 120`,
     ),
     check('usuarios_clave_formato', sql`${t.claveHash} like 'scrypt$%'`),
+    check('usuarios_telefono_formato', sql`${t.telefono} ~ '^[0-9]{10}$'`),
   ],
 );
 
@@ -317,6 +331,8 @@ export const EVENTOS_AUDITORIA = [
   'login_ok',
   'login_fallido',
   'logout',
+  'cuenta_creada',
+  'cuenta_eliminada',
   'clave_cambiada',
   'clave_restablecida',
   'usuario_creado',

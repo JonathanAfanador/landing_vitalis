@@ -1,0 +1,74 @@
+---
+import { actions } from 'astro:actions';
+import Pagina from '../../layouts/Pagina.astro';
+import Aviso from '../../components/ui/Aviso.astro';
+import Campo from '../../components/formularios/Campo.astro';
+import { destinoSeguro } from '../../lib/validacion';
+
+export const prerender = false;
+
+const ingreso = Astro.getActionResult(actions.cuenta.ingresar);
+if (ingreso?.data) return Astro.redirect(ingreso.data.destino, 303);
+const salida = Astro.getActionResult(actions.cuenta.salir);
+if (salida?.data) return Astro.redirect('/cuenta/ingresar?salio=1', 303);
+
+const volver = destinoSeguro(Astro.url.searchParams.get('volver'));
+// Con sesión no hay nada que hacer aquí.
+if (Astro.locals.usuario) return Astro.redirect(volver, 303);
+
+const enviado = ingreso?.error ? await Astro.request.formData() : null;
+const params = Astro.url.searchParams;
+const registro =
+  volver === '/cuenta' ? '/cuenta/registro' : `/cuenta/registro?volver=${encodeURIComponent(volver)}`;
+---
+
+<Pagina titulo="Ingresar · Vitalis" descripcion="Ingresa a tu cuenta de Vitalis." noindex>
+  <div class="mx-auto max-w-md">
+    <p class="caption-3 text-dorado-700">Mi cuenta</p>
+    <h1 class="heading-2 mt-3">Ingresar</h1>
+    <p class="body-3 mt-4 text-tinta-600">
+      Con tu cuenta ves tus pedidos y citas, y no tienes que escribir tus datos cada vez.
+    </p>
+
+    <div class="mt-6 flex flex-col gap-3">
+      {params.has('salio') && <Aviso tipo="exito">Cerraste sesión.</Aviso>}
+      {params.has('eliminada') && (
+        <Aviso tipo="exito">
+          Eliminamos tu cuenta y tus datos personales. Gracias por confiar en Vitalis.
+        </Aviso>
+      )}
+      {ingreso?.error && <Aviso tipo="error">{ingreso.error.message}</Aviso>}
+    </div>
+
+    <form
+      method="POST"
+      action={actions.cuenta.ingresar}
+      class="mt-6 flex flex-col gap-4 rounded-3xl bg-arena-100 p-6"
+    >
+      <input type="hidden" name="volver" value={volver} />
+      <Campo
+        name="email"
+        etiqueta="Correo"
+        type="email"
+        autocomplete="username"
+        required
+        maxlength={120}
+        value={String(enviado?.get('email') ?? '') || undefined}
+      />
+      <Campo name="clave" etiqueta="Contraseña" type="password" autocomplete="current-password" required />
+      <button type="submit" class="btn-principal w-full">
+        Ingresar
+      </button>
+      <p class="caption-5 text-tinta-600">
+        ¿Olvidaste tu contraseña? Escríbenos por WhatsApp y te damos una temporal.
+      </p>
+    </form>
+
+    <p class="body-3 mt-6 text-center">
+      ¿No tienes cuenta?{' '}
+      <a href={registro} class="font-semibold underline decoration-dorado-400 underline-offset-4">
+        Crear cuenta
+      </a>
+    </p>
+  </div>
+</Pagina>

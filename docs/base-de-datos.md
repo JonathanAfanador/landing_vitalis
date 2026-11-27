@@ -15,20 +15,24 @@ La web usa PostgreSQL en Neon con Drizzle ORM. Las tablas viven en el schema `vi
 | `drizzle/0007_permisos_citas.sql` | Permisos de `vitalis_app` (crear solicitudes) y `vitalis_admin` (ver, cambiar estado y notas) sobre las citas |
 | `drizzle/0008_eliminacion_y_exportacion.sql` | Eliminación lógica de pedidos y citas (quién y cuándo) y eventos de auditoría de eliminar, restaurar y descargar |
 | `drizzle/0009_permisos_eliminacion.sql` | `vitalis_admin` solo puede marcar o desmarcar la eliminación; nunca borra filas |
+| `drizzle/0010_portal_clientes.sql` | Celular y autorización de datos en las cuentas, y `usuario_id` en pedidos y citas para ligarlos a la cuenta del cliente |
+| `drizzle/0011_rol_cuenta_y_rls.sql` | Rol `vitalis_cuenta`, RLS en usuarios, pedidos, líneas y citas, y la función que anonimiza una cuenta eliminada por su titular |
 | `scripts/sincronizar-permisos.ts` | Copia el catálogo de permisos del código a la base (corre solo con `pnpm db:migrate`) |
 | `scripts/crear-superadmin.ts` | Crea el primer superadmin |
 | `scripts/seed-demo.ts` | Medicamentos de ejemplo `[DEMO]`, solo para desarrollo |
 
-## Tres usuarios, tres cadenas
+## Cuatro usuarios, cuatro cadenas
 
 | Variable | Usuario | Conexión | Para qué |
 | :-- | :-- | :-- | :-- |
 | `DATABASE_URL_MIGRACIONES` | `neondb_owner` | Directa (sin `-pooler`) | Crear y actualizar tablas. Solo en tu PC |
 | `DATABASE_URL` | `vitalis_app` | Con pooling (`-pooler`) | La web pública. En tu PC y en Vercel |
-| `DATABASE_URL_ADMIN` | `vitalis_admin` | Con pooling (`-pooler`) | El panel `/admin`. En tu PC y en Vercel |
+| `DATABASE_URL_ADMIN` | `vitalis_admin` | Con pooling (`-pooler`) | El panel `/admin`, el login y las sesiones. En tu PC y en Vercel |
+| `DATABASE_URL_CUENTA` | `vitalis_cuenta` | Con pooling (`-pooler`) | El portal de clientes `/cuenta`. En tu PC y en Vercel |
 
 - `vitalis_app` solo puede leer el catálogo, crear pedidos y solicitudes de cita, y descontar stock. No puede borrar nada, ni ver usuarios, sesiones o auditoría, ni leer los datos personales de los pedidos y las citas.
 - `vitalis_admin` gestiona usuarios, roles y sesiones. La auditoría solo la puede insertar y leer, nunca editar ni borrar.
+- `vitalis_cuenta` solo ve las filas del cliente con sesión: RLS (seguridad por fila) en la base filtra todo lo demás, aunque una consulta tenga un error. Sin cliente fijado, no ve nada.
 
 ## Paso a paso (una sola vez)
 
@@ -207,3 +211,49 @@ En **Settings > Environment Variables** añade `DATABASE_URL` (la de `vitalis_ap
 - `vitalis_app` tiene `statement_timeout` de 5 s e `idle_in_transaction_session_timeout` de 10 s.
 - La tienda pagina por cursor `(nombre, id)` con un índice parcial sobre los activos.
 - La CDN de Vercel guarda la tienda 60 s. El pedido recalcula precio y stock, así que esa diferencia nunca se cobra.
+
+## Fase 4D: portal de clientes
+
+En tu PC, después de bajar los cambios de `dev_jonathan`:
+
+1. **Migra.** Crea el rol `vitalis_cuenta`, activa RLS y sincroniza los permisos nuevos:
+
+   ```bash
+   pnpm db:migrate
+   ```
+
+   Debe decir "Nuevos: cuenta:ver_pedidos, …, clientes:ver, clientes:gestionar".
+
+2. **Dale contraseña al usuario del portal.** Genera otra contraseña (distinta de las anteriores):
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(24).toString('base64url'))"
+   ```
+
+   Y en Neon > **SQL Editor** ejecuta:
+
+   ```sql
+   ALTER ROLE vitalis_cuenta WITH LOGIN PASSWORD 'la-contraseña-generada';
+   ```
+
+   Igual que con los otros: no lo crees desde el panel de Roles de Neon.
+
+3. **Añade al `.env`** la cadena del portal (la de pooling, con `vitalis_cuenta` y su contraseña):
+
+   ```bash
+   DATABASE_URL_CUENTA="postgresql://vitalis_cuenta:la-contraseña-generada@ep-...-pooler.us-east-1.aws.neon.tech/neondb?sslmode=verify-full&channel_binding=require"
+   ```
+
+   Sin esta variable la web no arranca (Astro la exige).
+
+4. **En Vercel**, añade también `DATABASE_URL_CUENTA` en Settings > Environment Variables.
+
+### Comprobar que RLS funciona (opcional)
+
+En el SQL Editor de Neon, como el rol del portal y sin cliente fijado, no debe ver ninguna fila:
+
+```sql
+SET ROLE vitalis_cuenta;
+SELECT count(*) FROM vitalis.pedidos;  -- 0
+RESET ROLE;
+```

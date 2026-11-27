@@ -1,7 +1,7 @@
 import { count, desc, eq } from 'drizzle-orm';
 import { dbAdmin, type TxAdmin } from '../db/client-admin';
 import { auditoria, usuarios, type EventoAuditoria } from '../db/schema';
-import { desplazamiento } from './paginacion';
+import { desplazamiento, POR_PAGINA } from './paginacion';
 
 type Registro = {
   actorId: number | null;
@@ -26,8 +26,7 @@ export async function registrar(registro: Registro, tx: TxAdmin | typeof dbAdmin
   });
 }
 
-// Más reciente primero, 50 por página.
-export const AUDITORIA_POR_PAGINA = 50;
+// Más reciente primero, 25 por página como el resto del panel.
 
 export async function listarAuditoria(filtros: { evento?: EventoAuditoria | undefined; pagina: number }) {
   const donde = filtros.evento ? eq(auditoria.evento, filtros.evento) : undefined;
@@ -46,8 +45,8 @@ export async function listarAuditoria(filtros: { evento?: EventoAuditoria | unde
       .leftJoin(usuarios, eq(usuarios.id, auditoria.actorId))
       .where(donde)
       .orderBy(desc(auditoria.createdAt), desc(auditoria.id))
-      .limit(AUDITORIA_POR_PAGINA)
-      .offset(desplazamiento(filtros.pagina, AUDITORIA_POR_PAGINA)),
+      .limit(POR_PAGINA)
+      .offset(desplazamiento(filtros.pagina)),
     dbAdmin.select({ total: count() }).from(auditoria).where(donde),
   ]);
   return { registros, total: conteo?.total ?? 0 };

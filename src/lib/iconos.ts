@@ -34,6 +34,7 @@ import warningCircle from '@phosphor-icons/core/regular/warning-circle.svg?raw';
 import checkCircle from '@phosphor-icons/core/regular/check-circle.svg?raw';
 import prescription from '@phosphor-icons/core/regular/prescription.svg?raw';
 import paquete from '@phosphor-icons/core/regular/package.svg?raw';
+import userCircle from '@phosphor-icons/core/regular/user-circle.svg?raw';
 
 export const iconos = {
   bone: bone,
@@ -70,6 +71,7 @@ export const iconos = {
   'check-circle': checkCircle,
   prescription: prescription,
   package: paquete,
+  'user-circle': userCircle,
 };
 
 export type NombreIcono = keyof typeof iconos;
