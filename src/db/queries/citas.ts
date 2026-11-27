@@ -1,7 +1,6 @@
 import { and, count, eq, gt, sql } from 'drizzle-orm';
 import { db } from '../client';
 import { especies, solicitudesCita } from '../schema';
-import { nombreEspecie } from '../../lib/formato';
 import { generarCodigo } from '../../lib/pedido';
 import type { DatosCita } from '../../lib/validacion';
 
@@ -55,7 +54,6 @@ export async function crearCita(datos: DatosCita, ipHash: string) {
         nombre: datos.nombre,
         telefono: datos.telefono,
         mascota: datos.mascota,
-        especie: nombreEspecie(datos.especie).toLowerCase(),
         motivo: datos.motivo,
         fecha: datos.fecha ?? null,
         franja: datos.franja ?? null,

@@ -23,7 +23,6 @@ type ResumenCita = {
   nombre: string;
   telefono: string;
   mascota: string;
-  especie: string;
   motivo: string;
   fecha: string | null;
   franja: 'manana' | 'tarde' | null;
@@ -44,7 +43,7 @@ export const mensajeCita = (c: ResumenCita) => {
     .join(', ');
   return [
     `Hola, soy ${c.nombre}, mi número es ${formatoTelefono(c.telefono)}.`,
-    `Tengo un ${c.especie} que se llama ${c.mascota}. Lo que le pasa: ${c.motivo}`,
+    `Mi mascota se llama ${c.mascota}. Lo que le pasa: ${c.motivo}`,
     ...(cuando ? [`Si es posible, me queda mejor ${cuando}.`] : []),
     'Deseo agendar una cita de valoración.',
     `(Código de la web: ${c.codigo})`,

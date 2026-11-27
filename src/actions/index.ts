@@ -135,7 +135,7 @@ export const server = {
 
         const cita = await crearCita(datos, ipHash);
         if (!cita) {
-          throw new ActionError({ code: 'BAD_REQUEST', message: 'Elige si tu mascota es perro o gato.' });
+          throw new ActionError({ code: 'BAD_REQUEST', message: 'Elige qué tipo de mascota es.' });
         }
         return cita;
       }),

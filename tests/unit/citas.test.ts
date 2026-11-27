@@ -81,7 +81,7 @@ describe('datosCitaSchema', () => {
   it('pide elegir la especie con un mensaje claro', () => {
     const r = datosCitaSchema.safeParse({ ...valido, especie: undefined });
     expect(r.success).toBe(false);
-    expect(r.error?.issues[0]?.message).toBe('Elige si es perro o gato.');
+    expect(r.error?.issues[0]?.message).toBe('Elige qué tipo de mascota es.');
   });
 });
 
@@ -91,7 +91,6 @@ describe('mensaje de WhatsApp de la cita', () => {
     nombre: 'Laura Gómez',
     telefono: '3105551234',
     mascota: 'Luna',
-    especie: 'perro',
     motivo: 'Cojea de la pata trasera.',
     fecha: '2026-12-02',
     franja: 'manana' as const,
@@ -101,7 +100,7 @@ describe('mensaje de WhatsApp de la cita', () => {
     expect(mensajeCita(cita)).toBe(
       [
         'Hola, soy Laura Gómez, mi número es 310 555 1234.',
-        'Tengo un perro que se llama Luna. Lo que le pasa: Cojea de la pata trasera.',
+        'Mi mascota se llama Luna. Lo que le pasa: Cojea de la pata trasera.',
         'Si es posible, me queda mejor el miércoles, 2 de diciembre, en la mañana.',
         'Deseo agendar una cita de valoración.',
         '(Código de la web: CIT-7K3Q9M)',

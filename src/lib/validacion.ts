@@ -54,7 +54,10 @@ export const datosCitaSchema = z.object({
     .min(2, 'Escribe tu nombre.')
     .max(80, 'El nombre es demasiado largo.'),
   telefono: datosPedidoSchema.shape.telefono,
-  especie: z.string({ error: 'Elige si es perro o gato.' }).max(40).regex(SLUG, 'Elige si es perro o gato.'),
+  especie: z
+    .string({ error: 'Elige qué tipo de mascota es.' })
+    .max(40)
+    .regex(SLUG, 'Elige qué tipo de mascota es.'),
   mascota: requerido('Escribe el nombre de tu mascota.')
     .min(1, 'Escribe el nombre de tu mascota.')
     .max(60, 'El nombre es demasiado largo.'),
