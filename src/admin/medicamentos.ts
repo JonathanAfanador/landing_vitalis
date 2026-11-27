@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { and, asc, count, eq, ilike, or, sql } from 'drizzle-orm';
 import { dbAdmin, type TxAdmin } from '../db/client-admin';
 import { categorias, especies, medicamentoEspecie, medicamentos, pedidoItems } from '../db/schema';
+import { desplazamiento, POR_PAGINA } from './paginacion';
 
 export type DatosMedicamento = {
   nombre: string;
@@ -15,65 +16,41 @@ export type DatosMedicamento = {
   especies: number[];
 };
 
-type Cursor = { nombre: string; id: number };
-const leerCursor = (valor: string | null): Cursor | null => {
-  if (!valor) return null;
-  try {
-    const [nombre, id] = JSON.parse(Buffer.from(valor, 'base64url').toString()) as unknown[];
-    return typeof nombre === 'string' && Number.isInteger(id) ? { nombre, id: id as number } : null;
-  } catch {
-    return null;
-  }
-};
-
-// Listado del panel: incluye inactivos, con búsqueda, filtros y paginación por cursor (nombre, id).
-export async function listarMedicamentosPanel(
-  filtros: {
-    q: string;
-    categoriaId: number | null;
-    estado: 'activos' | 'inactivos' | 'todos';
-    cursor: string | null;
-  },
-  limite = 30,
-) {
-  const cursor = leerCursor(filtros.cursor);
+// Listado del panel: incluye inactivos, con búsqueda, filtros y paginación por número de página.
+export async function listarMedicamentosPanel(filtros: {
+  q: string;
+  categoriaId: number | null;
+  estado: 'activos' | 'inactivos' | 'todos';
+  pagina: number;
+}) {
   const patron = filtros.q ? `%${filtros.q.replace(/[\\%_]/g, (c) => `\\${c}`)}%` : null;
-  const filas = await dbAdmin
-    .select({
-      id: medicamentos.id,
-      nombre: medicamentos.nombre,
-      slug: medicamentos.slug,
-      presentacion: medicamentos.presentacion,
-      precioCop: medicamentos.precioCop,
-      stock: medicamentos.stock,
-      activo: medicamentos.activo,
-      requiereFormula: medicamentos.requiereFormula,
-      categoria: categorias.nombre,
-    })
-    .from(medicamentos)
-    .innerJoin(categorias, eq(categorias.id, medicamentos.categoriaId))
-    .where(
-      and(
-        filtros.estado === 'todos' ? undefined : eq(medicamentos.activo, filtros.estado === 'activos'),
-        filtros.categoriaId ? eq(medicamentos.categoriaId, filtros.categoriaId) : undefined,
-        patron
-          ? or(ilike(medicamentos.nombre, patron), ilike(medicamentos.principioActivo, patron))
-          : undefined,
-        cursor
-          ? sql`(${medicamentos.nombre}, ${medicamentos.id}) > (${cursor.nombre}::text, ${cursor.id}::bigint)`
-          : undefined,
-      ),
-    )
-    .orderBy(asc(medicamentos.nombre), asc(medicamentos.id))
-    .limit(limite + 1);
-  const hayMas = filas.length > limite;
-  const pagina = hayMas ? filas.slice(0, limite) : filas;
-  const ultimo = pagina.at(-1);
-  return {
-    medicamentos: pagina,
-    siguienteCursor:
-      hayMas && ultimo ? Buffer.from(JSON.stringify([ultimo.nombre, ultimo.id])).toString('base64url') : null,
-  };
+  const donde = and(
+    filtros.estado === 'todos' ? undefined : eq(medicamentos.activo, filtros.estado === 'activos'),
+    filtros.categoriaId ? eq(medicamentos.categoriaId, filtros.categoriaId) : undefined,
+    patron ? or(ilike(medicamentos.nombre, patron), ilike(medicamentos.principioActivo, patron)) : undefined,
+  );
+  const [filas, [conteo]] = await Promise.all([
+    dbAdmin
+      .select({
+        id: medicamentos.id,
+        nombre: medicamentos.nombre,
+        slug: medicamentos.slug,
+        presentacion: medicamentos.presentacion,
+        precioCop: medicamentos.precioCop,
+        stock: medicamentos.stock,
+        activo: medicamentos.activo,
+        requiereFormula: medicamentos.requiereFormula,
+        categoria: categorias.nombre,
+      })
+      .from(medicamentos)
+      .innerJoin(categorias, eq(categorias.id, medicamentos.categoriaId))
+      .where(donde)
+      .orderBy(asc(medicamentos.nombre), asc(medicamentos.id))
+      .limit(POR_PAGINA)
+      .offset(desplazamiento(filtros.pagina)),
+    dbAdmin.select({ total: count() }).from(medicamentos).where(donde),
+  ]);
+  return { medicamentos: filas, total: conteo?.total ?? 0 };
 }
 
 export async function obtenerMedicamentoPanel(id: number) {

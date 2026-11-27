@@ -1,0 +1,80 @@
+---
+// Paginación de los listados del panel. Conserva los filtros de la URL y solo cambia ?pagina=.
+import Icono from '../ui/Icono.astro';
+import { paginasVisibles, POR_PAGINA, totalPaginas } from '../../admin/paginacion';
+
+interface Props {
+  pagina: number;
+  total: number;
+  porPagina?: number;
+  nombre: string;
+}
+
+const { pagina, total, porPagina = POR_PAGINA, nombre } = Astro.props;
+const paginas = totalPaginas(total, porPagina);
+const enlace = (n: number) => {
+  const url = new URL(Astro.url);
+  if (n === 1) url.searchParams.delete('pagina');
+  else url.searchParams.set('pagina', String(n));
+  return url.pathname + url.search;
+};
+const desde = total ? (pagina - 1) * porPagina + 1 : 0;
+const hasta = Math.min(pagina * porPagina, total);
+const boton =
+  'grid min-h-10 min-w-10 place-items-center rounded-full border border-azul-900/20 px-3 text-sm transition duration-300 ease-base hover:border-azul-900/40';
+---
+
+{total > 0 && (
+  <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
+    <p class="body-6 text-tinta-600">
+      {desde}–{hasta} de {total} {nombre}
+    </p>
+    {paginas > 1 && (
+      <nav aria-label="Páginas" class="flex flex-wrap items-center gap-2">
+        {pagina > 1 ? (
+          <a href={enlace(pagina - 1)} class={boton} rel="prev">
+            <span class="flex items-center gap-1">
+              <Icono nombre="arrow-right" class="size-4 rotate-180" />
+              Anterior
+            </span>
+          </a>
+        ) : (
+          <span class:list={[boton, 'opacity-40']} aria-hidden="true">
+            Anterior
+          </span>
+        )}
+        {paginasVisibles(pagina, paginas).map((n) =>
+          n === null ? (
+            <span class="px-1 text-tinta-600" aria-hidden="true">
+              …
+            </span>
+          ) : n === pagina ? (
+            <span
+              class:list={[boton, 'border-azul-900 bg-azul-900 text-crema-50']}
+              aria-current="page"
+              aria-label={`Página ${n} de ${paginas}`}
+            >
+              {n}
+            </span>
+          ) : (
+            <a href={enlace(n)} class={boton} aria-label={`Página ${n}`}>
+              {n}
+            </a>
+          ),
+        )}
+        {pagina < paginas ? (
+          <a href={enlace(pagina + 1)} class={boton} rel="next">
+            <span class="flex items-center gap-1">
+              Siguiente
+              <Icono nombre="arrow-right" class="size-4" />
+            </span>
+          </a>
+        ) : (
+          <span class:list={[boton, 'opacity-40']} aria-hidden="true">
+            Siguiente
+          </span>
+        )}
+      </nav>
+    )}
+  </div>
+)}

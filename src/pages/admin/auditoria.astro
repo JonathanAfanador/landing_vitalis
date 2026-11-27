@@ -1,8 +1,10 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
+import Paginacion from '../../components/admin/Paginacion.astro';
 import SinPermiso from '../../components/admin/SinPermiso.astro';
-import { listarAuditoria } from '../../admin/auditoria';
+import { AUDITORIA_POR_PAGINA, listarAuditoria } from '../../admin/auditoria';
 import { permisoDePagina } from '../../admin/guard';
+import { leerPagina, totalPaginas } from '../../admin/paginacion';
 import { EVENTOS_AUDITORIA, type EventoAuditoria } from '../../db/schema';
 
 export const prerender = false;
@@ -31,17 +33,25 @@ const NOMBRES: Record<EventoAuditoria, string> = {
   categoria_editada: 'Categoría editada',
   categoria_eliminada: 'Categoría eliminada',
   pedido_estado_cambiado: 'Estado de pedido cambiado',
+  pedido_eliminado: 'Pedido eliminado',
+  pedido_restaurado: 'Pedido restaurado',
+  pedidos_exportados: 'Pedidos descargados en Excel',
   cita_estado_cambiado: 'Estado de cita cambiado',
+  cita_eliminada: 'Cita eliminada',
+  cita_restaurada: 'Cita restaurada',
+  citas_exportadas: 'Citas descargadas en Excel',
 };
 
 const eventoParam = Astro.url.searchParams.get('evento');
 const evento = EVENTOS_AUDITORIA.find((e) => e === eventoParam);
-const { registros, siguienteCursor } = actor
-  ? await listarAuditoria({ evento, cursor: Astro.url.searchParams.get('cursor') })
-  : { registros: [], siguienteCursor: null };
-
-const siguiente = new URL(Astro.url);
-if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const pagina = leerPagina(Astro.url.searchParams.get('pagina'));
+const { registros, total } = actor ? await listarAuditoria({ evento, pagina }) : { registros: [], total: 0 };
+const ultima = totalPaginas(total, AUDITORIA_POR_PAGINA);
+if (actor && pagina > ultima) {
+  const url = new URL(Astro.url);
+  url.searchParams.set('pagina', String(ultima));
+  return Astro.redirect(url.pathname + url.search, 303);
+}
 const fecha = new Intl.DateTimeFormat('es-CO', {
   dateStyle: 'medium',
   timeStyle: 'medium',
@@ -139,11 +149,7 @@ const resumir = (detalle: Record<string, unknown> | null) =>
         <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">No hay registros con ese filtro.</p>
       )}
 
-      {siguienteCursor && (
-        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
-          Registros anteriores
-        </a>
-      )}
+      <Paginacion pagina={pagina} total={total} porPagina={AUDITORIA_POR_PAGINA} nombre="registros" />
     </>
   )}
 </AdminLayout>

@@ -1,21 +1,35 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Paginacion from '../../../components/admin/Paginacion.astro';
 import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import Icono from '../../../components/ui/Icono.astro';
+import { can } from '../../../admin/autorizacion';
 import { permisoDePagina } from '../../../admin/guard';
-import { listarPedidosPanel } from '../../../admin/pedidos';
+import { leerPagina, totalPaginas } from '../../../admin/paginacion';
+import { leerFiltroPedidos, listarPedidosPanel } from '../../../admin/pedidos';
+import { ELIMINAR_REGISTROS } from '../../../admin/permisos';
 import { ESTADOS_PEDIDO, NOMBRE_ESTADO_PEDIDO } from '../../../lib/estados';
 import { formatoCOP } from '../../../lib/formato';
 
 export const prerender = false;
 
 const actor = permisoDePagina(Astro, 'pedidos:ver');
-const estadoParam = Astro.url.searchParams.get('estado');
-const estado = ESTADOS_PEDIDO.find((e) => e === estadoParam) ?? null;
-const { pedidos, siguienteCursor } = actor
-  ? await listarPedidosPanel({ estado, cursor: Astro.url.searchParams.get('cursor') })
-  : { pedidos: [], siguienteCursor: null };
-const siguiente = new URL(Astro.url);
-if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const veEliminados = can(actor, ELIMINAR_REGISTROS);
+const estado = leerFiltroPedidos(Astro.url.searchParams.get('estado'), veEliminados);
+const pagina = leerPagina(Astro.url.searchParams.get('pagina'));
+const { pedidos, total } = actor ? await listarPedidosPanel({ estado, pagina }) : { pedidos: [], total: 0 };
+// Una página que ya no existe (por ejemplo, tras eliminar) lleva a la última que sí.
+if (actor && pagina > totalPaginas(total)) {
+  const url = new URL(Astro.url);
+  url.searchParams.set('pagina', String(totalPaginas(total)));
+  return Astro.redirect(url.pathname + url.search, 303);
+}
+const FILTROS = [
+  { valor: null, texto: 'Todos' },
+  ...ESTADOS_PEDIDO.map((e) => ({ valor: e, texto: NOMBRE_ESTADO_PEDIDO[e] })),
+  ...(veEliminados ? [{ valor: 'eliminados' as const, texto: 'Eliminados' }] : []),
+];
+const descarga = `/admin/pedidos/exportar${estado ? `?estado=${estado}` : ''}`;
 const fecha = new Intl.DateTimeFormat('es-CO', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -35,15 +49,26 @@ const color: Record<string, string> = {
     <SinPermiso />
   ) : (
     <>
-      <h1 class="heading-3">Pedidos</h1>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <h1 class="heading-3">Pedidos</h1>
+        {can(actor, 'pedidos:exportar') && total > 0 && (
+          <a href={descarga} class="btn-borde" download>
+            <Icono nombre="arrow-down" class="size-5" />
+            Descargar Excel
+          </a>
+        )}
+      </div>
       <nav aria-label="Filtrar por estado" class="mt-6 flex flex-wrap gap-2">
-        {[null, ...ESTADOS_PEDIDO].map((e) => (
+        {FILTROS.map(({ valor, texto }) => (
           <a
-            href={e ? `/admin/pedidos?estado=${e}` : '/admin/pedidos'}
-            aria-current={e === estado ? 'page' : undefined}
-            class="btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50"
+            href={valor ? `/admin/pedidos?estado=${valor}` : '/admin/pedidos'}
+            aria-current={valor === estado ? 'page' : undefined}
+            class:list={[
+              'btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50',
+              valor === 'eliminados' && 'border-error-700/40 text-error-700',
+            ]}
           >
-            {e ? NOMBRE_ESTADO_PEDIDO[e] : 'Todos'}
+            {texto}
           </a>
         ))}
       </nav>
@@ -95,6 +120,11 @@ const color: Record<string, string> = {
                     <span class:list={['caption-3 rounded-full px-2 py-1', color[p.estado]]}>
                       {NOMBRE_ESTADO_PEDIDO[p.estado]}
                     </span>
+                    {estado === 'eliminados' && (
+                      <span class="caption-3 ml-1 rounded-full bg-error-700/10 px-2 py-1 text-error-700">
+                        Eliminado
+                      </span>
+                    )}
                   </td>
                   <td class="block px-4 py-2 md:table-cell md:py-3 md:text-right">
                     <a
@@ -112,14 +142,12 @@ const color: Record<string, string> = {
         </div>
       ) : (
         <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
-          No hay pedidos {estado ? 'en este estado' : 'todavía'}.
+          {estado === 'eliminados'
+            ? 'No hay pedidos eliminados.'
+            : `No hay pedidos ${estado ? 'en este estado' : 'todavía'}.`}
         </p>
       )}
-      {siguienteCursor && (
-        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
-          Pedidos anteriores
-        </a>
-      )}
+      <Paginacion pagina={pagina} total={total} nombre={total === 1 ? 'pedido' : 'pedidos'} />
     </>
   )}
 </AdminLayout>

@@ -87,6 +87,15 @@ export const PERMISOS = {
     requiere: ['pedidos:ver'],
     porDefecto: ADMIN,
   },
+  // Sin rol por defecto: al crearse solo lo tiene el superadmin, que decide a quién dárselo.
+  'pedidos:exportar': {
+    modulo: 'pedidos',
+    nombre: 'Descargar pedidos en Excel',
+    descripcion:
+      'Descargar el listado de pedidos con nombre, celular y correo de los clientes. Queda en la auditoría.',
+    datosPersonales: true,
+    requiere: ['pedidos:ver'],
+  },
   'citas:ver': {
     modulo: 'citas',
     nombre: 'Ver citas',
@@ -101,6 +110,14 @@ export const PERMISOS = {
       'Marcar citas como agendadas, atendidas, no asistió o canceladas, y escribir notas internas.',
     requiere: ['citas:ver'],
     porDefecto: ADMIN,
+  },
+  'citas:exportar': {
+    modulo: 'citas',
+    nombre: 'Descargar citas en Excel',
+    descripcion:
+      'Descargar el listado de citas con nombre y celular de los tutores y el motivo. Queda en la auditoría.',
+    datosPersonales: true,
+    requiere: ['citas:ver'],
   },
   'usuarios:ver': {
     modulo: 'usuarios',
@@ -130,9 +147,12 @@ export const PERMISOS = {
 
 export type CodigoPermiso = keyof typeof PERMISOS;
 
-// Capacidad exclusiva del superadmin. No está en el catálogo asignable ni en la base de datos:
-// ningún rol puede recibirla, así que solo la concede el bypass de `can()`.
+// Capacidades exclusivas del superadmin. No están en el catálogo asignable ni en la base de datos:
+// ningún rol puede recibirlas, así que solo las concede el bypass de `can()`.
 export const GESTIONAR_ROLES = 'roles:gestionar';
-export type Capacidad = CodigoPermiso | typeof GESTIONAR_ROLES;
+// Eliminar (y restaurar) pedidos y citas. Es lógico: los datos se conservan.
+export const ELIMINAR_REGISTROS = 'registros:eliminar';
+export const EXCLUSIVAS_SUPERADMIN = [GESTIONAR_ROLES, ELIMINAR_REGISTROS] as const;
+export type Capacidad = CodigoPermiso | (typeof EXCLUSIVAS_SUPERADMIN)[number];
 
 export const esCodigoPermiso = (codigo: string): codigo is CodigoPermiso => Object.hasOwn(PERMISOS, codigo);

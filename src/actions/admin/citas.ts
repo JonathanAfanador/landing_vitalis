@@ -1,8 +1,9 @@
 import { ActionError, defineAction } from 'astro:actions';
 import { z } from 'astro/zod';
 import { registrar } from '../../admin/auditoria';
-import { cambiarEstadoCita, guardarNotasCita } from '../../admin/citas';
+import { cambiarEstadoCita, eliminarCita, guardarNotasCita, restaurarCita } from '../../admin/citas';
 import { requerirPermiso } from '../../admin/guard';
+import { ELIMINAR_REGISTROS } from '../../admin/permisos';
 import { protegerErrores } from '../../lib/acciones';
 import { ESTADOS_CITA } from '../../lib/estados';
 
@@ -45,6 +46,33 @@ export const citasAdmin = {
       if (!(await guardarNotasCita(citaId, notas || null))) {
         throw new ActionError({ code: 'NOT_FOUND', message: 'Esa cita ya no existe.' });
       }
+      return { ok: true };
+    }),
+  }),
+
+  // Solo el superadmin. Es lógico: la cita sale de listados y descargas, pero los datos se conservan.
+  eliminar: defineAction({
+    accept: 'form',
+    input: z.object({ citaId }),
+    handler: protegerErrores(async ({ citaId }, ctx) => {
+      const actor = requerirPermiso(ctx.locals.usuario, ELIMINAR_REGISTROS);
+      if (!(await eliminarCita(citaId, actor.id))) {
+        throw new ActionError({ code: 'CONFLICT', message: 'Esa cita ya estaba eliminada o no existe.' });
+      }
+      await registrar({ actorId: actor.id, evento: 'cita_eliminada', entidad: 'cita', entidadId: citaId });
+      return { ok: true };
+    }),
+  }),
+
+  restaurar: defineAction({
+    accept: 'form',
+    input: z.object({ citaId }),
+    handler: protegerErrores(async ({ citaId }, ctx) => {
+      const actor = requerirPermiso(ctx.locals.usuario, ELIMINAR_REGISTROS);
+      if (!(await restaurarCita(citaId))) {
+        throw new ActionError({ code: 'CONFLICT', message: 'Esa cita no está eliminada.' });
+      }
+      await registrar({ actorId: actor.id, evento: 'cita_restaurada', entidad: 'cita', entidadId: citaId });
       return { ok: true };
     }),
   }),

@@ -13,6 +13,8 @@ La web usa PostgreSQL en Neon con Drizzle ORM. Las tablas viven en el schema `vi
 | `drizzle/0005_permisos_panel_catalogo_y_pedidos.sql` | Permisos de `vitalis_admin` para medicamentos, categorías y pedidos |
 | `drizzle/0006_citas.sql` | Solicitudes de cita: tabla `solicitudes_cita` con sus estados y franjas |
 | `drizzle/0007_permisos_citas.sql` | Permisos de `vitalis_app` (crear solicitudes) y `vitalis_admin` (ver, cambiar estado y notas) sobre las citas |
+| `drizzle/0008_eliminacion_y_exportacion.sql` | Eliminación lógica de pedidos y citas (quién y cuándo) y eventos de auditoría de eliminar, restaurar y descargar |
+| `drizzle/0009_permisos_eliminacion.sql` | `vitalis_admin` solo puede marcar o desmarcar la eliminación; nunca borra filas |
 | `scripts/sincronizar-permisos.ts` | Copia el catálogo de permisos del código a la base (corre solo con `pnpm db:migrate`) |
 | `scripts/crear-superadmin.ts` | Crea el primer superadmin |
 | `scripts/seed-demo.ts` | Medicamentos de ejemplo `[DEMO]`, solo para desarrollo |

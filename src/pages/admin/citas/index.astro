@@ -1,21 +1,35 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Paginacion from '../../../components/admin/Paginacion.astro';
 import SinPermiso from '../../../components/admin/SinPermiso.astro';
-import { listarCitasPanel } from '../../../admin/citas';
+import Icono from '../../../components/ui/Icono.astro';
+import { can } from '../../../admin/autorizacion';
+import { leerFiltroCitas, listarCitasPanel } from '../../../admin/citas';
 import { permisoDePagina } from '../../../admin/guard';
+import { leerPagina, totalPaginas } from '../../../admin/paginacion';
+import { ELIMINAR_REGISTROS } from '../../../admin/permisos';
 import { ESTADOS_CITA, NOMBRE_ESTADO_CITA } from '../../../lib/estados';
 import { preferenciaCita } from '../../../lib/whatsapp';
 
 export const prerender = false;
 
 const actor = permisoDePagina(Astro, 'citas:ver');
-const estadoParam = Astro.url.searchParams.get('estado');
-const estado = ESTADOS_CITA.find((e) => e === estadoParam) ?? null;
-const { citas, siguienteCursor } = actor
-  ? await listarCitasPanel({ estado, cursor: Astro.url.searchParams.get('cursor') })
-  : { citas: [], siguienteCursor: null };
-const siguiente = new URL(Astro.url);
-if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const veEliminadas = can(actor, ELIMINAR_REGISTROS);
+const estado = leerFiltroCitas(Astro.url.searchParams.get('estado'), veEliminadas);
+const pagina = leerPagina(Astro.url.searchParams.get('pagina'));
+const { citas, total } = actor ? await listarCitasPanel({ estado, pagina }) : { citas: [], total: 0 };
+// Una página que ya no existe (por ejemplo, tras eliminar) lleva a la última que sí.
+if (actor && pagina > totalPaginas(total)) {
+  const url = new URL(Astro.url);
+  url.searchParams.set('pagina', String(totalPaginas(total)));
+  return Astro.redirect(url.pathname + url.search, 303);
+}
+const FILTROS = [
+  { valor: null, texto: 'Todas' },
+  ...ESTADOS_CITA.map((e) => ({ valor: e, texto: NOMBRE_ESTADO_CITA[e] })),
+  ...(veEliminadas ? [{ valor: 'eliminadas' as const, texto: 'Eliminadas' }] : []),
+];
+const descarga = `/admin/citas/exportar${estado ? `?estado=${estado}` : ''}`;
 const fecha = new Intl.DateTimeFormat('es-CO', {
   dateStyle: 'medium',
   timeStyle: 'short',
@@ -35,19 +49,30 @@ const color: Record<string, string> = {
     <SinPermiso />
   ) : (
     <>
-      <h1 class="heading-3">Citas</h1>
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <h1 class="heading-3">Citas</h1>
+        {can(actor, 'citas:exportar') && total > 0 && (
+          <a href={descarga} class="btn-borde" download>
+            <Icono nombre="arrow-down" class="size-5" />
+            Descargar Excel
+          </a>
+        )}
+      </div>
       <p class="body-6 mt-2 max-w-2xl text-tinta-600">
         Solicitudes del formulario de la web. El horario se acuerda con el tutor por WhatsApp; cuando quede
         definido, marca la cita como agendada y anota el día y la hora.
       </p>
       <nav aria-label="Filtrar por estado" class="mt-6 flex flex-wrap gap-2">
-        {[null, ...ESTADOS_CITA].map((e) => (
+        {FILTROS.map(({ valor, texto }) => (
           <a
-            href={e ? `/admin/citas?estado=${e}` : '/admin/citas'}
-            aria-current={e === estado ? 'page' : undefined}
-            class="btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50"
+            href={valor ? `/admin/citas?estado=${valor}` : '/admin/citas'}
+            aria-current={valor === estado ? 'page' : undefined}
+            class:list={[
+              'btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50',
+              valor === 'eliminadas' && 'border-error-700/40 text-error-700',
+            ]}
           >
-            {e ? NOMBRE_ESTADO_CITA[e] : 'Todas'}
+            {texto}
           </a>
         ))}
       </nav>
@@ -103,6 +128,11 @@ const color: Record<string, string> = {
                     <span class:list={['caption-3 rounded-full px-2 py-1', color[c.estado]]}>
                       {NOMBRE_ESTADO_CITA[c.estado]}
                     </span>
+                    {estado === 'eliminadas' && (
+                      <span class="caption-3 ml-1 rounded-full bg-error-700/10 px-2 py-1 text-error-700">
+                        Eliminada
+                      </span>
+                    )}
                   </td>
                   <td class="block px-4 py-2 md:table-cell md:py-3 md:text-right">
                     <a
@@ -120,14 +150,12 @@ const color: Record<string, string> = {
         </div>
       ) : (
         <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
-          No hay citas {estado ? 'en este estado' : 'todavía'}.
+          {estado === 'eliminadas'
+            ? 'No hay citas eliminadas.'
+            : `No hay citas ${estado ? 'en este estado' : 'todavía'}.`}
         </p>
       )}
-      {siguienteCursor && (
-        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
-          Citas anteriores
-        </a>
-      )}
+      <Paginacion pagina={pagina} total={total} nombre={total === 1 ? 'cita' : 'citas'} />
     </>
   )}
 </AdminLayout>

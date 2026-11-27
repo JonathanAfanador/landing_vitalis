@@ -57,6 +57,20 @@
       "when": 1795742063567,
       "tag": "0007_permisos_citas",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795744697356,
+      "tag": "0008_eliminacion_y_exportacion",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795744704465,
+      "tag": "0009_permisos_eliminacion",
+      "breakpoints": true
     }
   ]
 }

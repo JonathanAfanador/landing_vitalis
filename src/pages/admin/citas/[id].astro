@@ -8,6 +8,7 @@ import Icono from '../../../components/ui/Icono.astro';
 import { can } from '../../../admin/autorizacion';
 import { obtenerCitaPanel } from '../../../admin/citas';
 import { permisoDePagina } from '../../../admin/guard';
+import { ELIMINAR_REGISTROS } from '../../../admin/permisos';
 import { NOMBRE_ESTADO_CITA, siguientesCita, type EstadoCita } from '../../../lib/estados';
 import { nombreEspecie } from '../../../lib/formato';
 import { enlaceWhatsApp, preferenciaCita } from '../../../lib/whatsapp';
@@ -18,13 +19,20 @@ const actor = permisoDePagina(Astro, 'citas:ver');
 const citaId = Number(Astro.params.id);
 const cambio = Astro.getActionResult(actions.admin.citas.cambiarEstado);
 const notas = Astro.getActionResult(actions.admin.citas.guardarNotas);
+const eliminar = Astro.getActionResult(actions.admin.citas.eliminar);
+const restaurar = Astro.getActionResult(actions.admin.citas.restaurar);
 if (cambio?.data) return Astro.redirect(`/admin/citas/${citaId}?ok=estado`, 303);
 if (notas?.data) return Astro.redirect(`/admin/citas/${citaId}?ok=notas`, 303);
+if (eliminar?.data) return Astro.redirect(`/admin/citas/${citaId}?ok=eliminada`, 303);
+if (restaurar?.data) return Astro.redirect(`/admin/citas/${citaId}?ok=restaurada`, 303);
 
 const cita = actor && Number.isInteger(citaId) && citaId > 0 ? await obtenerCitaPanel(citaId) : null;
-if (actor && !cita) return Astro.redirect('/admin/citas', 303);
+const superadmin = can(actor, ELIMINAR_REGISTROS);
+// Una cita eliminada solo la ve el superadmin; para los demás es como si no existiera.
+if (actor && (!cita || (cita.eliminadaEn && !superadmin))) return Astro.redirect('/admin/citas', 303);
 
-const gestiona = can(actor, 'citas:gestionar');
+const eliminada = Boolean(cita?.eliminadaEn);
+const gestiona = can(actor, 'citas:gestionar') && !eliminada;
 const fecha = new Intl.DateTimeFormat('es-CO', {
   dateStyle: 'long',
   timeStyle: 'short',
@@ -63,7 +71,25 @@ const errorNotas = notas?.error ? notas.error.message : undefined;
       <div class="mt-6 flex flex-col gap-3">
         {Astro.url.searchParams.get('ok') === 'estado' && <Aviso tipo="exito">Estado actualizado.</Aviso>}
         {Astro.url.searchParams.get('ok') === 'notas' && <Aviso tipo="exito">Notas guardadas.</Aviso>}
-        {cambio?.error && <Aviso tipo="error">{cambio.error.message}</Aviso>}
+        {Astro.url.searchParams.get('ok') === 'restaurada' && (
+          <Aviso tipo="exito">Cita restaurada: vuelve a aparecer en el listado.</Aviso>
+        )}
+        {[cambio, eliminar, restaurar].map((r) => r?.error && <Aviso tipo="error">{r.error.message}</Aviso>)}
+        {eliminada && cita.eliminadaEn && (
+          <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-error-700/30 bg-error-700/5 p-4">
+            <p class="body-6 text-error-700">
+              <strong>Cita eliminada</strong> el {fecha.format(cita.eliminadaEn)}
+              {cita.eliminadaPorNombre && ` por ${cita.eliminadaPorNombre}`}. No aparece en los listados ni en
+              las descargas, pero sus datos se conservan.
+            </p>
+            <form method="POST" action={actions.admin.citas.restaurar}>
+              <input type="hidden" name="citaId" value={cita.id} />
+              <button type="submit" class="btn-borde">
+                Restaurar cita
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       <div class="mt-8 grid gap-8 lg:grid-cols-[3fr_2fr] lg:items-start">
@@ -151,7 +177,7 @@ const errorNotas = notas?.error ? notas.error.message : undefined;
               cambios de estado. Puedes seguir escribiendo notas.
             </p>
           )}
-          {!gestiona && (
+          {!gestiona && !eliminada && (
             <p class="body-6 rounded-2xl bg-arena-100 p-4 text-tinta-600">
               Tu rol solo permite ver las citas. Para agendarlas o cambiar su estado hace falta el permiso
               "Gestionar citas".
@@ -181,6 +207,24 @@ const errorNotas = notas?.error ? notas.error.message : undefined;
                 </form>
               ))}
             </section>
+          )}
+          {superadmin && !eliminada && (
+            <form
+              method="POST"
+              action={actions.admin.citas.eliminar}
+              data-confirmar="¿Eliminar esta cita? Dejará de verse en los listados y las descargas. Los datos se conservan y podrás restaurarla desde la pestaña Eliminadas."
+              class="border-t border-azul-900/10 pt-6"
+            >
+              <input type="hidden" name="citaId" value={cita.id} />
+              <button
+                type="submit"
+                class="btn min-h-11 w-full border border-error-700/40 text-error-700 hover:bg-error-700/10"
+              >
+                <Icono nombre="trash" class="size-5" />
+                Eliminar cita
+              </button>
+              <p class="caption-5 mt-2 text-tinta-600">Solo el superadmin puede eliminar.</p>
+            </form>
           )}
         </aside>
       </div>

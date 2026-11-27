@@ -1,44 +1,77 @@
-import { and, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { dbAdmin } from '../db/client-admin';
-import { medicamentos, pedidoItems, pedidos } from '../db/schema';
-import { origenesPedido, type EstadoPedido } from '../lib/estados';
-import { leerCursorFecha, paginar } from './cursor';
+import { medicamentos, pedidoItems, pedidos, usuarios } from '../db/schema';
+import { ESTADOS_PEDIDO, origenesPedido, type EstadoPedido } from '../lib/estados';
+import { MAX_FILAS_EXPORTACION } from './exportar';
+import { desplazamiento, POR_PAGINA } from './paginacion';
 
-// Más recientes primero, paginado por cursor (created_at, id). El listado solo muestra el nombre del
-// cliente; teléfono y correo quedan para el detalle.
-export async function listarPedidosPanel(
-  filtros: { estado: EstadoPedido | null; cursor: string | null },
-  limite = 30,
-) {
-  const cursor = leerCursorFecha(filtros.cursor);
-  const filas = await dbAdmin
-    .select({
-      id: pedidos.id,
-      codigo: pedidos.codigo,
-      fecha: pedidos.createdAt,
-      fechaExacta: sql<string>`${pedidos.createdAt}::text`,
-      cliente: pedidos.nombreCliente,
-      totalCop: pedidos.totalCop,
-      estado: pedidos.estado,
-    })
-    .from(pedidos)
-    .where(
-      and(
-        filtros.estado ? eq(pedidos.estado, filtros.estado) : undefined,
-        cursor
-          ? sql`(${pedidos.createdAt}, ${pedidos.id}) < (${cursor.fecha}::timestamptz, ${cursor.id}::bigint)`
-          : undefined,
-      ),
-    )
-    .orderBy(desc(pedidos.createdAt), desc(pedidos.id))
-    .limit(limite + 1);
-  const { pagina, siguienteCursor } = paginar(filas, limite);
-  return { pedidos: pagina, siguienteCursor };
+export type FiltroPedidos = EstadoPedido | 'eliminados' | null;
+
+// ?estado= de la URL. "eliminados" solo vale para quien puede eliminar (el superadmin).
+export const leerFiltroPedidos = (valor: string | null, veEliminados: boolean): FiltroPedidos =>
+  valor === 'eliminados' && veEliminados ? 'eliminados' : (ESTADOS_PEDIDO.find((e) => e === valor) ?? null);
+
+// Los eliminados solo aparecen en su propio filtro (lo ve el superadmin); el resto nunca los incluye.
+const filtroPedidos = (filtro: FiltroPedidos) =>
+  filtro === 'eliminados'
+    ? isNotNull(pedidos.eliminadoEn)
+    : and(isNull(pedidos.eliminadoEn), filtro ? eq(pedidos.estado, filtro) : undefined);
+
+// Más recientes primero. El listado solo muestra el nombre del cliente; teléfono y correo quedan para el
+// detalle y la descarga.
+export async function listarPedidosPanel(filtros: { estado: FiltroPedidos; pagina: number }) {
+  const donde = filtroPedidos(filtros.estado);
+  const [filas, [conteo]] = await Promise.all([
+    dbAdmin
+      .select({
+        id: pedidos.id,
+        codigo: pedidos.codigo,
+        fecha: pedidos.createdAt,
+        cliente: pedidos.nombreCliente,
+        totalCop: pedidos.totalCop,
+        estado: pedidos.estado,
+      })
+      .from(pedidos)
+      .where(donde)
+      .orderBy(desc(pedidos.createdAt), desc(pedidos.id))
+      .limit(POR_PAGINA)
+      .offset(desplazamiento(filtros.pagina)),
+    dbAdmin.select({ total: count() }).from(pedidos).where(donde),
+  ]);
+  return { pedidos: filas, total: conteo?.total ?? 0 };
 }
 
+// Todo lo que lleva el Excel, con el mismo filtro del listado.
+export const pedidosParaExportar = (filtro: FiltroPedidos) =>
+  dbAdmin
+    .select({
+      codigo: pedidos.codigo,
+      fecha: pedidos.createdAt,
+      estado: pedidos.estado,
+      cliente: pedidos.nombreCliente,
+      telefono: pedidos.telefono,
+      email: pedidos.email,
+      totalCop: pedidos.totalCop,
+      medicamentos: sql<string>`coalesce(string_agg(${pedidoItems.cantidad} || ' × ' || ${medicamentos.nombre}, '; ' order by ${medicamentos.nombre}), '')`,
+      declaraFormula: pedidos.declaraFormula,
+      notas: pedidos.notas,
+    })
+    .from(pedidos)
+    .leftJoin(pedidoItems, eq(pedidoItems.pedidoId, pedidos.id))
+    .leftJoin(medicamentos, eq(medicamentos.id, pedidoItems.medicamentoId))
+    .where(filtroPedidos(filtro))
+    .groupBy(pedidos.id)
+    .orderBy(desc(pedidos.createdAt), desc(pedidos.id))
+    .limit(MAX_FILAS_EXPORTACION);
+
 export async function obtenerPedidoPanel(id: number) {
-  const [pedido] = await dbAdmin.select().from(pedidos).where(eq(pedidos.id, id));
-  if (!pedido) return null;
+  const [fila] = await dbAdmin
+    .select({ pedido: pedidos, eliminadoPorNombre: usuarios.nombre })
+    .from(pedidos)
+    .leftJoin(usuarios, eq(usuarios.id, pedidos.eliminadoPor))
+    .where(eq(pedidos.id, id));
+  if (!fila) return null;
+  const pedido = { ...fila.pedido, eliminadoPorNombre: fila.eliminadoPorNombre };
   const lineas = await dbAdmin
     .select({
       nombre: medicamentos.nombre,
@@ -57,7 +90,7 @@ export const contarPedidosPendientes = async () => {
   const [fila] = await dbAdmin
     .select({ total: sql<number>`count(*)::int` })
     .from(pedidos)
-    .where(eq(pedidos.estado, 'pendiente'));
+    .where(and(eq(pedidos.estado, 'pendiente'), isNull(pedidos.eliminadoEn)));
   return fila?.total ?? 0;
 };
 
@@ -69,7 +102,9 @@ export async function cambiarEstadoPedido(id: number, hacia: EstadoPedido) {
     const [cambiado] = await tx
       .update(pedidos)
       .set({ estado: hacia })
-      .where(and(eq(pedidos.id, id), inArray(pedidos.estado, origenesPedido(hacia))))
+      .where(
+        and(eq(pedidos.id, id), inArray(pedidos.estado, origenesPedido(hacia)), isNull(pedidos.eliminadoEn)),
+      )
       .returning({ id: pedidos.id });
     if (!cambiado) return false;
 
@@ -83,4 +118,32 @@ export async function cambiarEstadoPedido(id: number, hacia: EstadoPedido) {
     }
     return true;
   });
+}
+
+// Solo se eliminan pedidos cerrados: uno pendiente, confirmado o pagado aún tiene stock reservado o dinero
+// de por medio. Así eliminar nunca descuadra el inventario.
+export const ESTADOS_ELIMINABLES_PEDIDO = ['entregado', 'cancelado'] as const satisfies EstadoPedido[];
+
+export async function eliminarPedido(id: number, actorId: number) {
+  const [fila] = await dbAdmin
+    .update(pedidos)
+    .set({ eliminadoEn: new Date(), eliminadoPor: actorId })
+    .where(
+      and(
+        eq(pedidos.id, id),
+        isNull(pedidos.eliminadoEn),
+        inArray(pedidos.estado, ESTADOS_ELIMINABLES_PEDIDO),
+      ),
+    )
+    .returning({ id: pedidos.id });
+  return Boolean(fila);
+}
+
+export async function restaurarPedido(id: number) {
+  const [fila] = await dbAdmin
+    .update(pedidos)
+    .set({ eliminadoEn: null, eliminadoPor: null })
+    .where(and(eq(pedidos.id, id), isNotNull(pedidos.eliminadoEn)))
+    .returning({ id: pedidos.id });
+  return Boolean(fila);
 }

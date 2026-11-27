@@ -1,0 +1,10 @@
+ALTER TABLE "vitalis"."auditoria" DROP CONSTRAINT "auditoria_evento_valido";--> statement-breakpoint
+ALTER TABLE "vitalis"."pedidos" ADD COLUMN "eliminado_en" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "vitalis"."pedidos" ADD COLUMN "eliminado_por" bigint;--> statement-breakpoint
+ALTER TABLE "vitalis"."solicitudes_cita" ADD COLUMN "eliminada_en" timestamp with time zone;--> statement-breakpoint
+ALTER TABLE "vitalis"."solicitudes_cita" ADD COLUMN "eliminada_por" bigint;--> statement-breakpoint
+ALTER TABLE "vitalis"."pedidos" ADD CONSTRAINT "pedidos_eliminado_por_usuarios_id_fk" FOREIGN KEY ("eliminado_por") REFERENCES "vitalis"."usuarios"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "vitalis"."solicitudes_cita" ADD CONSTRAINT "solicitudes_cita_eliminada_por_usuarios_id_fk" FOREIGN KEY ("eliminada_por") REFERENCES "vitalis"."usuarios"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "vitalis"."auditoria" ADD CONSTRAINT "auditoria_evento_valido" CHECK (evento in ('login_ok', 'login_fallido', 'logout', 'clave_cambiada', 'clave_restablecida', 'usuario_creado', 'usuario_desactivado', 'usuario_reactivado', 'rol_asignado', 'rol_creado', 'rol_editado', 'rol_eliminado', 'permisos_rol_cambiados', 'medicamento_creado', 'medicamento_editado', 'medicamento_eliminado', 'stock_ajustado', 'categoria_creada', 'categoria_editada', 'categoria_eliminada', 'pedido_estado_cambiado', 'pedido_eliminado', 'pedido_restaurado', 'pedidos_exportados', 'cita_estado_cambiado', 'cita_eliminada', 'cita_restaurada', 'citas_exportadas'));--> statement-breakpoint
+ALTER TABLE "vitalis"."pedidos" ADD CONSTRAINT "pedidos_eliminado_completo" CHECK (("vitalis"."pedidos"."eliminado_en" is null) = ("vitalis"."pedidos"."eliminado_por" is null));--> statement-breakpoint
+ALTER TABLE "vitalis"."solicitudes_cita" ADD CONSTRAINT "solicitudes_cita_eliminada_completa" CHECK (("vitalis"."solicitudes_cita"."eliminada_en" is null) = ("vitalis"."solicitudes_cita"."eliminada_por" is null));

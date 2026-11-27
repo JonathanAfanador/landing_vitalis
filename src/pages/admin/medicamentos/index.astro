@@ -1,11 +1,13 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
+import Paginacion from '../../../components/admin/Paginacion.astro';
 import SinPermiso from '../../../components/admin/SinPermiso.astro';
 import Aviso from '../../../components/ui/Aviso.astro';
 import { can } from '../../../admin/autorizacion';
 import { listarCategoriasPanel } from '../../../admin/categorias';
 import { permisoDePagina } from '../../../admin/guard';
 import { listarMedicamentosPanel } from '../../../admin/medicamentos';
+import { leerPagina, totalPaginas } from '../../../admin/paginacion';
 import { formatoCOP } from '../../../lib/formato';
 
 export const prerender = false;
@@ -17,15 +19,15 @@ const categoriaId = Number(params.get('categoria')) || null;
 const estadoParam = params.get('estado');
 const estado = estadoParam === 'inactivos' || estadoParam === 'todos' ? estadoParam : 'activos';
 
-const [{ medicamentos, siguienteCursor }, categorias] = actor
-  ? await Promise.all([
-      listarMedicamentosPanel({ q, categoriaId, estado, cursor: params.get('cursor') }),
-      listarCategoriasPanel(),
-    ])
-  : [{ medicamentos: [], siguienteCursor: null }, []];
-
-const siguiente = new URL(Astro.url);
-if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const pagina = leerPagina(params.get('pagina'));
+const [{ medicamentos, total }, categorias] = actor
+  ? await Promise.all([listarMedicamentosPanel({ q, categoriaId, estado, pagina }), listarCategoriasPanel()])
+  : [{ medicamentos: [], total: 0 }, []];
+if (actor && pagina > totalPaginas(total)) {
+  const url = new URL(Astro.url);
+  url.searchParams.set('pagina', String(totalPaginas(total)));
+  return Astro.redirect(url.pathname + url.search, 303);
+}
 const campo = 'min-h-11 rounded-full border border-azul-900/20 bg-crema-50 px-4';
 const aviso = { creado: 'Medicamento creado.', eliminado: 'Medicamento eliminado.' }[params.get('ok') ?? ''];
 ---
@@ -161,11 +163,7 @@ const aviso = { creado: 'Medicamento creado.', eliminado: 'Medicamento eliminado
             : 'Todavía no hay medicamentos. Crea el primero.'}
         </p>
       )}
-      {siguienteCursor && (
-        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
-          Ver más
-        </a>
-      )}
+      <Paginacion pagina={pagina} total={total} nombre={total === 1 ? 'medicamento' : 'medicamentos'} />
     </>
   )}
 </AdminLayout>

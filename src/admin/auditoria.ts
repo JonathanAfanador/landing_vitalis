@@ -1,7 +1,7 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { count, desc, eq } from 'drizzle-orm';
 import { dbAdmin, type TxAdmin } from '../db/client-admin';
 import { auditoria, usuarios, type EventoAuditoria } from '../db/schema';
-import { leerCursorFecha, paginar } from './cursor';
+import { desplazamiento } from './paginacion';
 
 type Registro = {
   actorId: number | null;
@@ -26,37 +26,29 @@ export async function registrar(registro: Registro, tx: TxAdmin | typeof dbAdmin
   });
 }
 
-// Más reciente primero, paginado por cursor (created_at, id).
-export async function listarAuditoria(
-  filtros: { evento?: EventoAuditoria | undefined; cursor: string | null },
-  limite = 50,
-) {
-  const cursor = leerCursorFecha(filtros.cursor);
-  const filas = await dbAdmin
-    .select({
-      id: auditoria.id,
-      fecha: auditoria.createdAt,
-      // Con microsegundos: Date los trunca a milisegundos y el cursor saltaría registros.
-      fechaExacta: sql<string>`${auditoria.createdAt}::text`,
-      evento: auditoria.evento,
-      entidad: auditoria.entidad,
-      entidadId: auditoria.entidadId,
-      detalle: auditoria.detalle,
-      actor: usuarios.nombre,
-    })
-    .from(auditoria)
-    .leftJoin(usuarios, eq(usuarios.id, auditoria.actorId))
-    .where(
-      and(
-        filtros.evento ? eq(auditoria.evento, filtros.evento) : undefined,
-        cursor
-          ? sql`(${auditoria.createdAt}, ${auditoria.id}) < (${cursor.fecha}::timestamptz, ${cursor.id}::bigint)`
-          : undefined,
-      ),
-    )
-    .orderBy(desc(auditoria.createdAt), desc(auditoria.id))
-    .limit(limite + 1);
+// Más reciente primero, 50 por página.
+export const AUDITORIA_POR_PAGINA = 50;
 
-  const { pagina, siguienteCursor } = paginar(filas, limite);
-  return { registros: pagina, siguienteCursor };
+export async function listarAuditoria(filtros: { evento?: EventoAuditoria | undefined; pagina: number }) {
+  const donde = filtros.evento ? eq(auditoria.evento, filtros.evento) : undefined;
+  const [registros, [conteo]] = await Promise.all([
+    dbAdmin
+      .select({
+        id: auditoria.id,
+        fecha: auditoria.createdAt,
+        evento: auditoria.evento,
+        entidad: auditoria.entidad,
+        entidadId: auditoria.entidadId,
+        detalle: auditoria.detalle,
+        actor: usuarios.nombre,
+      })
+      .from(auditoria)
+      .leftJoin(usuarios, eq(usuarios.id, auditoria.actorId))
+      .where(donde)
+      .orderBy(desc(auditoria.createdAt), desc(auditoria.id))
+      .limit(AUDITORIA_POR_PAGINA)
+      .offset(desplazamiento(filtros.pagina, AUDITORIA_POR_PAGINA)),
+    dbAdmin.select({ total: count() }).from(auditoria).where(donde),
+  ]);
+  return { registros, total: conteo?.total ?? 0 };
 }

@@ -9,7 +9,7 @@ Entregas: **4A** autenticación + RBAC + auditoría · **4B** medicamentos, cate
 | Tema | Decisión |
 | :-- | :-- |
 | Rol `usuario` | Se crea **con permisos reales de cliente** y un portal mínimo (entrega 4D). Ver la sección 12 |
-| Exportar CSV | **Pospuesto.** Queda en `docs/pendientes.md` y se recuerda al cerrar cada entrega |
+| Exportar | **Hecho en la sección 18:** descarga en Excel (.xlsx) de pedidos y citas con permiso propio |
 | Envíos | **No hay domicilios: solo venta y recogida en la clínica.** Se quita `enviado` y se dejan de pedir dirección y municipio. Ver la sección 13 |
 | Aviso por WhatsApp al confirmar | **No se hace ahora.** Queda en pendientes |
 | Citas | **Se agendan por WhatsApp.** La administradora acomoda los horarios: el formulario guarda la solicitud y lleva al tutor a WhatsApp con el mensaje escrito. Ver la sección 17 |
@@ -437,3 +437,27 @@ La administradora acomoda los horarios, así que la web no maneja agenda: **el f
 - **Migraciones:** `0006` (tabla `solicitudes_cita` y enums `estado_cita` y `franja_cita`) y `0007` (GRANT). `vitalis_app` inserta y solo lee `id, codigo, ip_hash, created_at`, nunca los datos del tutor. `vitalis_admin` lee y solo cambia `estado` y `notas_internas`.
 - **Refactor:** el cursor `(created_at, id)` de los listados del panel pasa a `src/admin/cursor.ts` (lo usan pedidos, citas y auditoría).
 - **Probado contra PostgreSQL 16 local:** migraciones desde cero, GRANT por columna, formulario con errores y relleno, camino feliz con el mensaje de WhatsApp, límite de envíos y, en el panel, notas, agendar y atender con su registro en la auditoría.
+
+## 18. Eliminar, descargar en Excel y paginación (decisión del usuario)
+
+**Eliminar pedidos y citas: solo el superadmin y sin perder datos.**
+
+- Es **eliminación lógica**: columnas `eliminado_en`/`eliminado_por` en `pedidos` y `eliminada_en`/`eliminada_por` en `solicitudes_cita` (un CHECK exige las dos o ninguna). El registro sale de listados, conteos del resumen y descargas, pero se conserva. `vitalis_admin` no tiene `DELETE`: solo puede marcar o desmarcar.
+- Capacidad exclusiva `registros:eliminar`, como `roles:gestionar`: no está en el catálogo, ningún rol puede recibirla y solo la concede el bypass de `can()`. Las Actions responden 403 a cualquier otro usuario.
+- El superadmin ve la pestaña **Eliminadas / Eliminados**, un aviso en el detalle (cuándo y quién) y el botón **Restaurar**. Para los demás, un registro eliminado es como si no existiera.
+- **Pedidos:** solo se eliminan los **entregados o cancelados**, para no dejar stock reservado ni pagos a medias (cancelar primero devuelve el stock). **Citas:** cualquiera, también las de spam sin atender.
+- Una cita o un pedido eliminado no admite cambios de estado ni notas hasta restaurarlo.
+- Auditoría: `pedido_eliminado`, `pedido_restaurado`, `cita_eliminada`, `cita_restaurada`.
+
+**Descargar en Excel.**
+
+- Botón **Descargar Excel** en los listados de pedidos y citas. Descarga **todo lo que coincide con el filtro elegido** (no solo la página), hasta 10.000 filas.
+- Es un **.xlsx real** generado sin dependencias (`src/lib/xlsx.ts`, unas 170 líneas con el ZIP): encabezado en negrita, fila congelada, filtros y anchos de columna. El celular va como texto (no se vuelve `3,1E+09`), los totales como número con separador de miles y nada de lo que escribe un cliente se ejecuta como fórmula. Validado con openpyxl y LibreOffice.
+- Permisos nuevos **`pedidos:exportar`** y **`citas:exportar`** (datos personales). No se asignan por defecto: al principio solo el superadmin descarga, y él decide a qué rol dárselos.
+- Cada descarga queda en la auditoría con el filtro y el número de filas (`pedidos_exportados`, `citas_exportadas`).
+
+**Paginación.**
+
+- Antes había un solo botón "Registros anteriores" que aparecía después de 30 o 50 filas, sin decir en qué página se estaba ni permitir volver. Ahora pedidos, citas y medicamentos (25 por página) y auditoría (50) muestran **"1–25 de 60"**, Anterior, los números de página y Siguiente, conservando los filtros.
+- Se pagina por número (`?pagina=2`, LIMIT/OFFSET con conteo total): con los volúmenes de una clínica es rápido y más claro que el cursor. Una página que ya no existe lleva a la última. Se elimina `src/admin/cursor.ts`. La tienda pública conserva su paginación.
+- **Probado contra PostgreSQL 16 local** con 60 citas y 134 registros de auditoría: páginas y redirección, descargas abiertas con openpyxl y LibreOffice, eliminar y restaurar como superadmin, pedido pendiente no eliminable, y como admin sin pestaña, sin botones, descarga en 403 y Actions de eliminar en 403.

@@ -1,4 +1,4 @@
-import { GESTIONAR_ROLES, PERMISOS, esCodigoPermiso, type Capacidad, type CodigoPermiso } from './permisos';
+import { PERMISOS, esCodigoPermiso, type Capacidad, type CodigoPermiso } from './permisos';
 
 export type UsuarioSesion = {
   id: number;
@@ -22,7 +22,8 @@ const NO = (motivo: string): Resultado => ({ ok: false, motivo });
 export function can(usuario: UsuarioSesion | null | undefined, capacidad: Capacidad): boolean {
   if (!usuario) return false;
   if (usuario.esSuperadmin) return true;
-  return capacidad !== GESTIONAR_ROLES && usuario.permisos.has(capacidad);
+  // Las exclusivas del superadmin no están en el catálogo: un rol nunca las tiene.
+  return esCodigoPermiso(capacidad) && usuario.permisos.has(capacidad);
 }
 
 const tieneTodos = (usuario: UsuarioSesion, codigos: readonly string[]) =>

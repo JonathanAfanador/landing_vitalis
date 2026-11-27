@@ -3,9 +3,11 @@ import { actions } from 'astro:actions';
 import AdminLayout from '../../../layouts/AdminLayout.astro';
 import SinPermiso from '../../../components/admin/SinPermiso.astro';
 import Aviso from '../../../components/ui/Aviso.astro';
+import Icono from '../../../components/ui/Icono.astro';
 import { can } from '../../../admin/autorizacion';
 import { permisoDePagina } from '../../../admin/guard';
-import { obtenerPedidoPanel } from '../../../admin/pedidos';
+import { ESTADOS_ELIMINABLES_PEDIDO, obtenerPedidoPanel } from '../../../admin/pedidos';
+import { ELIMINAR_REGISTROS } from '../../../admin/permisos';
 import { NOMBRE_ESTADO_PEDIDO, siguientesPedido, type EstadoPedido } from '../../../lib/estados';
 import { formatoCOP } from '../../../lib/formato';
 
@@ -14,11 +16,19 @@ export const prerender = false;
 const actor = permisoDePagina(Astro, 'pedidos:ver');
 const pedidoId = Number(Astro.params.id);
 const cambio = Astro.getActionResult(actions.admin.pedidos.cambiarEstado);
+const eliminar = Astro.getActionResult(actions.admin.pedidos.eliminar);
+const restaurar = Astro.getActionResult(actions.admin.pedidos.restaurar);
 if (cambio?.data) return Astro.redirect(`/admin/pedidos/${pedidoId}?ok=1`, 303);
+if (eliminar?.data) return Astro.redirect(`/admin/pedidos/${pedidoId}?ok=eliminado`, 303);
+if (restaurar?.data) return Astro.redirect(`/admin/pedidos/${pedidoId}?ok=restaurado`, 303);
 
 const pedido =
   actor && Number.isInteger(pedidoId) && pedidoId > 0 ? await obtenerPedidoPanel(pedidoId) : null;
-if (actor && !pedido) return Astro.redirect('/admin/pedidos', 303);
+const superadmin = can(actor, ELIMINAR_REGISTROS);
+// Un pedido eliminado solo lo ve el superadmin; para los demás es como si no existiera.
+if (actor && (!pedido || (pedido.eliminadoEn && !superadmin))) return Astro.redirect('/admin/pedidos', 303);
+const eliminado = Boolean(pedido?.eliminadoEn);
+const eliminable = pedido ? (ESTADOS_ELIMINABLES_PEDIDO as readonly string[]).includes(pedido.estado) : false;
 
 const fecha = new Intl.DateTimeFormat('es-CO', {
   dateStyle: 'long',
@@ -36,11 +46,12 @@ const ACCIONES: Record<EstadoPedido, { texto: string; confirmar?: string }> = {
   },
 };
 // Solo los botones que la máquina de estados permite y que el usuario puede usar.
-const botones = pedido
-  ? siguientesPedido(pedido.estado).filter((e) =>
-      can(actor, e === 'cancelado' ? 'pedidos:cancelar' : 'pedidos:cambiar_estado'),
-    )
-  : [];
+const botones =
+  pedido && !eliminado
+    ? siguientesPedido(pedido.estado).filter((e) =>
+        can(actor, e === 'cancelado' ? 'pedidos:cancelar' : 'pedidos:cambiar_estado'),
+      )
+    : [];
 ---
 
 <AdminLayout titulo={pedido ? `Pedido ${pedido.codigo}` : 'Pedido'}>
@@ -58,7 +69,25 @@ const botones = pedido
       </p>
       <div class="mt-6 flex flex-col gap-3">
         {Astro.url.searchParams.has('ok') && <Aviso tipo="exito">Estado actualizado.</Aviso>}
-        {cambio?.error && <Aviso tipo="error">{cambio.error.message}</Aviso>}
+        {Astro.url.searchParams.get('ok') === 'restaurado' && (
+          <Aviso tipo="exito">Pedido restaurado: vuelve a aparecer en el listado.</Aviso>
+        )}
+        {[cambio, eliminar, restaurar].map((r) => r?.error && <Aviso tipo="error">{r.error.message}</Aviso>)}
+        {eliminado && pedido.eliminadoEn && (
+          <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-error-700/30 bg-error-700/5 p-4">
+            <p class="body-6 text-error-700">
+              <strong>Pedido eliminado</strong> el {fecha.format(pedido.eliminadoEn)}
+              {pedido.eliminadoPorNombre && ` por ${pedido.eliminadoPorNombre}`}. No aparece en los listados
+              ni en las descargas, pero sus datos se conservan.
+            </p>
+            <form method="POST" action={actions.admin.pedidos.restaurar}>
+              <input type="hidden" name="pedidoId" value={pedido.id} />
+              <button type="submit" class="btn-borde">
+                Restaurar pedido
+              </button>
+            </form>
+          </div>
+        )}
       </div>
 
       <div class="mt-8 grid gap-8 lg:grid-cols-[3fr_2fr] lg:items-start">
@@ -159,6 +188,32 @@ const botones = pedido
           )}
           {pedido.estado === 'pagado' && (
             <p class="caption-5 text-tinta-600">Un pedido pagado ya no se cancela desde el panel.</p>
+          )}
+          {superadmin && !eliminado && (
+            <div class="border-t border-azul-900/10 pt-6">
+              {eliminable ? (
+                <form
+                  method="POST"
+                  action={actions.admin.pedidos.eliminar}
+                  data-confirmar="¿Eliminar este pedido? Dejará de verse en los listados y las descargas. Los datos se conservan y podrás restaurarlo desde la pestaña Eliminados."
+                >
+                  <input type="hidden" name="pedidoId" value={pedido.id} />
+                  <button
+                    type="submit"
+                    class="btn min-h-11 w-full border border-error-700/40 text-error-700 hover:bg-error-700/10"
+                  >
+                    <Icono nombre="trash" class="size-5" />
+                    Eliminar pedido
+                  </button>
+                </form>
+              ) : (
+                <p class="caption-5 text-tinta-600">
+                  Solo se eliminan pedidos entregados o cancelados, para no dejar stock reservado ni pagos
+                  pendientes.
+                </p>
+              )}
+              <p class="caption-5 mt-2 text-tinta-600">Solo el superadmin puede eliminar.</p>
+            </div>
           )}
         </aside>
       </div>

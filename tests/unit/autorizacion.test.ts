@@ -8,7 +8,7 @@ import {
   puedeGestionarUsuario,
   type UsuarioSesion,
 } from '../../src/admin/autorizacion';
-import { GESTIONAR_ROLES } from '../../src/admin/permisos';
+import { ELIMINAR_REGISTROS, GESTIONAR_ROLES } from '../../src/admin/permisos';
 
 const usuario = (permisos: string[], extra: Partial<UsuarioSesion> = {}): UsuarioSesion => ({
   id: 10,
@@ -44,6 +44,17 @@ describe('can', () => {
 
   it('nadie más gestiona roles, aunque tenga el código en sus permisos', () => {
     expect(can(usuario([GESTIONAR_ROLES, 'usuarios:ver']), GESTIONAR_ROLES)).toBe(false);
+  });
+
+  it('solo el superadmin elimina pedidos y citas, aunque otro tenga todos los demás permisos', () => {
+    expect(can(superadmin, ELIMINAR_REGISTROS)).toBe(true);
+    const casiTodo = usuario([ELIMINAR_REGISTROS, 'pedidos:ver', 'pedidos:cancelar', 'citas:gestionar']);
+    expect(can(casiTodo, ELIMINAR_REGISTROS)).toBe(false);
+  });
+
+  it('descargar en Excel es un permiso aparte de ver', () => {
+    expect(can(usuario(['citas:ver']), 'citas:exportar')).toBe(false);
+    expect(can(usuario(['pedidos:ver', 'pedidos:exportar']), 'pedidos:exportar')).toBe(true);
   });
 });
 

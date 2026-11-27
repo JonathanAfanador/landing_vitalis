@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { paginar } from '../../src/admin/cursor';
 import { origenesCita, puedePasarCita, siguientesCita } from '../../src/lib/estados';
 import { formatoFecha, formatoTelefono, nombreEspecie } from '../../src/lib/formato';
 import { generarCodigo } from '../../src/lib/pedido';
@@ -139,22 +138,5 @@ describe('utilidades de la cita', () => {
 
   it('genera códigos CIT con el formato de la base de datos', () => {
     for (let i = 0; i < 100; i++) expect(generarCodigo('CIT')).toMatch(/^CIT-[A-Z2-9]{6}$/);
-  });
-});
-
-describe('paginar (cursor del panel)', () => {
-  const filas = [1, 2, 3].map((id) => ({ id, fechaExacta: `2026-11-2${id} 10:00:00.123456-05` }));
-
-  it('sin fila de sobra no hay página siguiente', () => {
-    expect(paginar(filas, 3)).toEqual({ pagina: filas, siguienteCursor: null });
-  });
-
-  it('con una fila de sobra, el cursor apunta a la última mostrada', () => {
-    const { pagina, siguienteCursor } = paginar(filas, 2);
-    expect(pagina).toHaveLength(2);
-    expect(JSON.parse(Buffer.from(siguienteCursor ?? '', 'base64url').toString())).toEqual([
-      '2026-11-22 10:00:00.123456-05',
-      2,
-    ]);
   });
 });

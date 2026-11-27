@@ -132,6 +132,11 @@ export const pedidos = vitalis.table(
     declaraFormula: boolean('declara_formula').notNull().default(false),
     aceptaTratamientoDatos: boolean('acepta_tratamiento_datos').notNull(),
     ipHash: text('ip_hash').notNull(),
+    // Eliminación lógica: solo el superadmin. El pedido sale de listados y descargas pero no se borra.
+    eliminadoEn: timestamp('eliminado_en', { withTimezone: true }),
+    eliminadoPor: bigint('eliminado_por', { mode: 'number' }).references(() => usuarios.id, {
+      onDelete: 'restrict',
+    }),
     createdAt: creado(),
     updatedAt: actualizado(),
   },
@@ -142,6 +147,7 @@ export const pedidos = vitalis.table(
     check('pedidos_acepta_datos', sql`${t.aceptaTratamientoDatos}`),
     check('pedidos_nombre_largo', sql`char_length(${t.nombreCliente}) between 2 and 80`),
     check('pedidos_notas_largo', sql`char_length(${t.notas}) <= 500`),
+    check('pedidos_eliminado_completo', sql`(${t.eliminadoEn} is null) = (${t.eliminadoPor} is null)`),
     index('pedidos_estado_created_at_idx').on(t.estado, t.createdAt.desc()),
     index('pedidos_ip_hash_created_at_idx').on(t.ipHash, t.createdAt),
   ],
@@ -187,6 +193,11 @@ export const solicitudesCita = vitalis.table(
     notasInternas: text('notas_internas'),
     aceptaTratamientoDatos: boolean('acepta_tratamiento_datos').notNull(),
     ipHash: text('ip_hash').notNull(),
+    // Eliminación lógica: solo el superadmin. La cita sale de listados y descargas pero no se borra.
+    eliminadaEn: timestamp('eliminada_en', { withTimezone: true }),
+    eliminadaPor: bigint('eliminada_por', { mode: 'number' }).references(() => usuarios.id, {
+      onDelete: 'restrict',
+    }),
     createdAt: creado(),
     updatedAt: actualizado(),
   },
@@ -198,6 +209,10 @@ export const solicitudesCita = vitalis.table(
     check('solicitudes_cita_mascota_largo', sql`char_length(${t.nombreMascota}) between 1 and 60`),
     check('solicitudes_cita_motivo_largo', sql`char_length(${t.motivo}) between 5 and 500`),
     check('solicitudes_cita_notas_largo', sql`char_length(${t.notasInternas}) <= 1000`),
+    check(
+      'solicitudes_cita_eliminada_completa',
+      sql`(${t.eliminadaEn} is null) = (${t.eliminadaPor} is null)`,
+    ),
     index('solicitudes_cita_estado_created_at_idx').on(t.estado, t.createdAt.desc()),
     index('solicitudes_cita_ip_hash_created_at_idx').on(t.ipHash, t.createdAt),
     index('solicitudes_cita_especie_id_idx').on(t.especieId),
@@ -320,7 +335,13 @@ export const EVENTOS_AUDITORIA = [
   'categoria_editada',
   'categoria_eliminada',
   'pedido_estado_cambiado',
+  'pedido_eliminado',
+  'pedido_restaurado',
+  'pedidos_exportados',
   'cita_estado_cambiado',
+  'cita_eliminada',
+  'cita_restaurada',
+  'citas_exportadas',
 ] as const;
 export type EventoAuditoria = (typeof EVENTOS_AUDITORIA)[number];
 

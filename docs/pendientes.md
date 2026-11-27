@@ -6,7 +6,6 @@ Lo que se decidió dejar para después. Se repasa al cerrar cada entrega.
 
 | Pendiente | Origen | Qué hace falta |
 | :-- | :-- | :-- |
-| Exportar pedidos y citas a CSV (`pedidos:exportar`, `citas:exportar`) | Fase 4, decisión del usuario | Decidir quién puede exportar y para qué; los archivos contienen datos personales (Ley 1581) |
 | Aviso al cliente al confirmar pedido o cita | Fase 4, decisión del usuario | Botón de WhatsApp desde el panel (gratis) o envío automático (API de WhatsApp Business o correo) |
 | Verificación de correo y "olvidé mi contraseña" en el portal de clientes | Fase 4 (4D) | Dominio propio y un servicio de correo (por ejemplo Resend, plan gratuito) |
 | Cancelar automáticamente pedidos que no se recogen | Fase 4 | Definir cuántos días se guarda un pedido |
