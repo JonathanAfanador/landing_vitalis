@@ -14,6 +14,7 @@ import type { CodigoPermiso } from '../admin/permisos';
 import { COOKIE_SESION, cerrarSesion, crearSesion } from '../admin/sesiones';
 import { actualizarMiPerfil, marcarSolicitudEliminacion } from '../cuenta/datos';
 import { protegerErrores } from '../lib/acciones';
+import { vaciarCarrito } from '../lib/carrito-cookies';
 import { CLAVE_MAX, validarClaveNueva } from '../lib/clave';
 import { hashIp } from '../lib/ip';
 import { datosPerfilSchema, datosRegistroSchema, destinoSeguro } from '../lib/validacion';
@@ -123,6 +124,9 @@ export const cuenta = {
     handler: protegerErrores(async (_: unknown, ctx: ActionAPIContext) => {
       const usuario = ctx.locals.usuario;
       await cerrarSesion(ctx.cookies.get(COOKIE_SESION)?.value, ctx.cookies);
+      // El carrito vive en el navegador, no en la cuenta: al salir se vacía para que en un equipo compartido
+      // la siguiente persona no vea lo que dejó la anterior. Al ingresar o registrarse sí se conserva.
+      vaciarCarrito(ctx.cookies);
       if (usuario)
         await registrar({ actorId: usuario.id, evento: 'logout', ipHash: hashIp(ctx.clientAddress) });
       return { ok: true };

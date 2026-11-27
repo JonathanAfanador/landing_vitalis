@@ -529,3 +529,7 @@ Sin dominio propio no hay correo transaccional, así que el cliente recupera su 
 - **Base de datos:** el código lo maneja solo el núcleo de sesiones (`vitalis_admin`); el portal (`vitalis_cuenta`) solo puede leer la fecha. La supresión de la cuenta lo borra (migraciones `0014` y `0015`).
 - **Auditoría:** `clave_recuperada`, `recuperacion_fallida` (con `bloqueado` cuando aplica) y `codigo_recuperacion_nuevo`.
 - **Probado en el navegador:** código al registrarse, enlace desde Ingresar, código equivocado, código correcto en minúsculas y sin guiones, sesión iniciada y código nuevo, el código usado ya no sirve, ingreso con la contraseña nueva, generar código en el perfil con contraseña mala y buena, y bloqueo tras 5 fallos. En la base solo hay el scrypt.
+
+## 22. El carrito se vacía al cerrar sesión
+
+El carrito vive en una cookie del navegador (30 días), no en la cuenta: así se puede llenar sin sesión y enviarlo después de ingresar o registrarse. Los pedidos y citas solo se ligan a una cuenta cuando se hacen con la sesión abierta; **nunca se cruzan por teléfono ni por correo**. Como en un equipo compartido la siguiente persona veía el carrito de la anterior, ahora **"Salir" en el portal vacía el carrito**. Al ingresar o registrarse se sigue conservando.
