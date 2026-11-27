@@ -30,6 +30,8 @@ const estilo =
       class={estilo}
       aria-describedby={describe}
       aria-invalid={error ? 'true' : undefined}
+      required={atributos.required}
+      minlength={atributos.minlength}
       maxlength={atributos.maxlength}
       set:text={atributos.value}
     />

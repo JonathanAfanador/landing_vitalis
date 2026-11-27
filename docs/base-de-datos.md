@@ -11,6 +11,8 @@ La web usa PostgreSQL en Neon con Drizzle ORM. Las tablas viven en el schema `vi
 | `drizzle/0003_rol_admin_triggers_y_roles_base.sql` | Rol `vitalis_admin`, triggers de protección, roles base y endurece `vitalis_app` |
 | `drizzle/0004_solo_tienda_y_estado_pagado.sql` | Pedidos sin dirección ni municipio y estados pendiente → confirmado → pagado → entregado / cancelado |
 | `drizzle/0005_permisos_panel_catalogo_y_pedidos.sql` | Permisos de `vitalis_admin` para medicamentos, categorías y pedidos |
+| `drizzle/0006_citas.sql` | Solicitudes de cita: tabla `solicitudes_cita` con sus estados y franjas |
+| `drizzle/0007_permisos_citas.sql` | Permisos de `vitalis_app` (crear solicitudes) y `vitalis_admin` (ver, cambiar estado y notas) sobre las citas |
 | `scripts/sincronizar-permisos.ts` | Copia el catálogo de permisos del código a la base (corre solo con `pnpm db:migrate`) |
 | `scripts/crear-superadmin.ts` | Crea el primer superadmin |
 | `scripts/seed-demo.ts` | Medicamentos de ejemplo `[DEMO]`, solo para desarrollo |
@@ -23,7 +25,7 @@ La web usa PostgreSQL en Neon con Drizzle ORM. Las tablas viven en el schema `vi
 | `DATABASE_URL` | `vitalis_app` | Con pooling (`-pooler`) | La web pública. En tu PC y en Vercel |
 | `DATABASE_URL_ADMIN` | `vitalis_admin` | Con pooling (`-pooler`) | El panel `/admin`. En tu PC y en Vercel |
 
-- `vitalis_app` solo puede leer el catálogo, crear pedidos y descontar stock. No puede borrar nada, ni ver usuarios, sesiones o auditoría, ni leer los datos personales de los pedidos.
+- `vitalis_app` solo puede leer el catálogo, crear pedidos y solicitudes de cita, y descontar stock. No puede borrar nada, ni ver usuarios, sesiones o auditoría, ni leer los datos personales de los pedidos y las citas.
 - `vitalis_admin` gestiona usuarios, roles y sesiones. La auditoría solo la puede insertar y leer, nunca editar ni borrar.
 
 ## Paso a paso (una sola vez)

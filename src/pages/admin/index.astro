@@ -3,6 +3,7 @@ import AdminLayout from '../../layouts/AdminLayout.astro';
 import Icono from '../../components/ui/Icono.astro';
 import { can } from '../../admin/autorizacion';
 import { GESTIONAR_ROLES, type Capacidad } from '../../admin/permisos';
+import { contarCitasPorAgendar } from '../../admin/citas';
 import { contarPedidosPendientes } from '../../admin/pedidos';
 import type { NombreIcono } from '../../lib/iconos';
 
@@ -16,6 +17,13 @@ const accesos: { titulo: string; texto: string; href: string; icono: NombreIcono
     href: '/admin/pedidos',
     icono: 'shopping-bag',
     capacidad: 'pedidos:ver',
+  },
+  {
+    titulo: 'Citas',
+    texto: 'Solicitudes de la web: agendar por WhatsApp, anotar el horario y marcar asistencia.',
+    href: '/admin/citas',
+    icono: 'calendar-check',
+    capacidad: 'citas:ver',
   },
   {
     titulo: 'Medicamentos',
@@ -55,22 +63,42 @@ const accesos: { titulo: string; texto: string; href: string; icono: NombreIcono
 ];
 const visibles = accesos.filter((a) => can(usuario, a.capacidad));
 // Solo un número, sin datos de clientes.
-const pendientes = can(usuario, 'pedidos:ver') ? await contarPedidosPendientes() : null;
+const [pendientes, porAgendar] = await Promise.all([
+  can(usuario, 'pedidos:ver') ? contarPedidosPendientes() : null,
+  can(usuario, 'citas:ver') ? contarCitasPorAgendar() : null,
+]);
 ---
 
 <AdminLayout titulo="Resumen">
   <h1 class="heading-3">Hola, {usuario?.nombre}</h1>
   <p class="body-3 mt-2 text-tinta-600">Tu rol es {usuario?.rolNombre}.</p>
-  {pendientes !== null && (
-    <a
-      href="/admin/pedidos?estado=pendiente"
-      class="mt-6 inline-flex items-center gap-3 rounded-full bg-azul-900 py-2 pr-5 pl-2 text-crema-50"
-    >
-      <span class="grid size-10 place-items-center rounded-full bg-dorado-400 font-semibold text-azul-900 tabular-nums">
-        {pendientes}
-      </span>
-      <span class="body-1">{pendientes === 1 ? 'pedido pendiente' : 'pedidos pendientes'} por confirmar</span>
-    </a>
+  {(pendientes !== null || porAgendar !== null) && (
+    <div class="mt-6 flex flex-wrap gap-3">
+      {pendientes !== null && (
+        <a
+          href="/admin/pedidos?estado=pendiente"
+          class="inline-flex items-center gap-3 rounded-full bg-azul-900 py-2 pr-5 pl-2 text-crema-50"
+        >
+          <span class="grid size-10 place-items-center rounded-full bg-dorado-400 font-semibold text-azul-900 tabular-nums">
+            {pendientes}
+          </span>
+          <span class="body-1">
+            {pendientes === 1 ? 'pedido pendiente' : 'pedidos pendientes'} por confirmar
+          </span>
+        </a>
+      )}
+      {porAgendar !== null && (
+        <a
+          href="/admin/citas?estado=solicitada"
+          class="inline-flex items-center gap-3 rounded-full bg-azul-900 py-2 pr-5 pl-2 text-crema-50"
+        >
+          <span class="grid size-10 place-items-center rounded-full bg-dorado-400 font-semibold text-azul-900 tabular-nums">
+            {porAgendar}
+          </span>
+          <span class="body-1">{porAgendar === 1 ? 'cita' : 'citas'} por agendar</span>
+        </a>
+      )}
+    </div>
   )}
 
   {visibles.length ? (

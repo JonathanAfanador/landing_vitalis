@@ -17,6 +17,7 @@ export const MODULOS = {
   medicamentos: 'Medicamentos',
   categorias: 'Categorías',
   pedidos: 'Pedidos',
+  citas: 'Citas',
   usuarios: 'Usuarios',
   auditoria: 'Auditoría',
 } as const;
@@ -84,6 +85,21 @@ export const PERMISOS = {
     nombre: 'Cancelar pedidos',
     descripcion: 'Cancelar pedidos pendientes o confirmados. El stock vuelve al catálogo.',
     requiere: ['pedidos:ver'],
+    porDefecto: ADMIN,
+  },
+  'citas:ver': {
+    modulo: 'citas',
+    nombre: 'Ver citas',
+    descripcion: 'Ver las solicitudes de cita con el nombre y celular del tutor y el motivo de la consulta.',
+    datosPersonales: true,
+    porDefecto: ADMIN,
+  },
+  'citas:gestionar': {
+    modulo: 'citas',
+    nombre: 'Gestionar citas',
+    descripcion:
+      'Marcar citas como agendadas, atendidas, no asistió o canceladas, y escribir notas internas.',
+    requiere: ['citas:ver'],
     porDefecto: ADMIN,
   },
   'usuarios:ver': {

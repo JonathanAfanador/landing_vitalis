@@ -3,6 +3,7 @@ import {
   bigint,
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
@@ -33,6 +34,16 @@ export const estadoPedido = vitalis.enum('estado_pedido', [
   'entregado',
   'cancelado',
 ]);
+
+// La clínica acuerda el horario por WhatsApp: solicitada → confirmada → atendida o no asistió, o cancelada.
+export const estadoCita = vitalis.enum('estado_cita', [
+  'solicitada',
+  'confirmada',
+  'atendida',
+  'no_asistio',
+  'cancelada',
+]);
+export const franjaCita = vitalis.enum('franja_cita', ['manana', 'tarde']);
 
 export const especies = vitalis.table(
   'especies',
@@ -153,6 +164,43 @@ export const pedidoItems = vitalis.table(
     check('pedido_items_cantidad', sql`${t.cantidad} between 1 and 99`),
     check('pedido_items_precio_positivo', sql`${t.precioUnitarioCop} > 0`),
     index('pedido_items_medicamento_id_idx').on(t.medicamentoId),
+  ],
+);
+
+// Solicitudes del formulario de citas. El horario real lo acuerda la clínica por WhatsApp; aquí queda la
+// preferencia del tutor (opcional) y lo que la clínica anote.
+export const solicitudesCita = vitalis.table(
+  'solicitudes_cita',
+  {
+    id: id(),
+    codigo: text('codigo').notNull().unique(),
+    nombreTutor: text('nombre_tutor').notNull(),
+    telefono: text('telefono').notNull(),
+    especieId: bigint('especie_id', { mode: 'number' })
+      .notNull()
+      .references(() => especies.id, { onDelete: 'restrict' }),
+    nombreMascota: text('nombre_mascota').notNull(),
+    motivo: text('motivo').notNull(),
+    fechaPreferida: date('fecha_preferida'),
+    franja: franjaCita('franja'),
+    estado: estadoCita('estado').notNull().default('solicitada'),
+    notasInternas: text('notas_internas'),
+    aceptaTratamientoDatos: boolean('acepta_tratamiento_datos').notNull(),
+    ipHash: text('ip_hash').notNull(),
+    createdAt: creado(),
+    updatedAt: actualizado(),
+  },
+  (t) => [
+    check('solicitudes_cita_codigo_formato', sql`${t.codigo} ~ '^CIT-[A-Z2-9]{6}$'`),
+    check('solicitudes_cita_telefono_formato', sql`${t.telefono} ~ '^[0-9]{10}$'`),
+    check('solicitudes_cita_acepta_datos', sql`${t.aceptaTratamientoDatos}`),
+    check('solicitudes_cita_tutor_largo', sql`char_length(${t.nombreTutor}) between 2 and 80`),
+    check('solicitudes_cita_mascota_largo', sql`char_length(${t.nombreMascota}) between 1 and 60`),
+    check('solicitudes_cita_motivo_largo', sql`char_length(${t.motivo}) between 5 and 500`),
+    check('solicitudes_cita_notas_largo', sql`char_length(${t.notasInternas}) <= 1000`),
+    index('solicitudes_cita_estado_created_at_idx').on(t.estado, t.createdAt.desc()),
+    index('solicitudes_cita_ip_hash_created_at_idx').on(t.ipHash, t.createdAt),
+    index('solicitudes_cita_especie_id_idx').on(t.especieId),
   ],
 );
 

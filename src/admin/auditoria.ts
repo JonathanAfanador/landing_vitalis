@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { dbAdmin, type TxAdmin } from '../db/client-admin';
 import { auditoria, usuarios, type EventoAuditoria } from '../db/schema';
+import { leerCursorFecha, paginar } from './cursor';
 
 type Registro = {
   actorId: number | null;
@@ -25,23 +26,12 @@ export async function registrar(registro: Registro, tx: TxAdmin | typeof dbAdmin
   });
 }
 
-type CursorAuditoria = { fecha: string; id: number };
-const leerCursor = (valor: string | null): CursorAuditoria | null => {
-  if (!valor) return null;
-  try {
-    const [fecha, id] = JSON.parse(Buffer.from(valor, 'base64url').toString()) as unknown[];
-    return typeof fecha === 'string' && Number.isInteger(id) ? { fecha, id: id as number } : null;
-  } catch {
-    return null;
-  }
-};
-
 // Más reciente primero, paginado por cursor (created_at, id).
 export async function listarAuditoria(
   filtros: { evento?: EventoAuditoria | undefined; cursor: string | null },
   limite = 50,
 ) {
-  const cursor = leerCursor(filtros.cursor);
+  const cursor = leerCursorFecha(filtros.cursor);
   const filas = await dbAdmin
     .select({
       id: auditoria.id,
@@ -67,14 +57,6 @@ export async function listarAuditoria(
     .orderBy(desc(auditoria.createdAt), desc(auditoria.id))
     .limit(limite + 1);
 
-  const hayMas = filas.length > limite;
-  const pagina = hayMas ? filas.slice(0, limite) : filas;
-  const ultimo = pagina.at(-1);
-  return {
-    registros: pagina,
-    siguienteCursor:
-      hayMas && ultimo
-        ? Buffer.from(JSON.stringify([ultimo.fechaExacta, ultimo.id])).toString('base64url')
-        : null,
-  };
+  const { pagina, siguienteCursor } = paginar(filas, limite);
+  return { registros: pagina, siguienteCursor };
 }

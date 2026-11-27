@@ -1,0 +1,177 @@
+---
+import { actions } from 'astro:actions';
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import Aviso from '../../../components/ui/Aviso.astro';
+import Campo from '../../../components/formularios/Campo.astro';
+import Icono from '../../../components/ui/Icono.astro';
+import { can } from '../../../admin/autorizacion';
+import { obtenerCitaPanel } from '../../../admin/citas';
+import { permisoDePagina } from '../../../admin/guard';
+import { NOMBRE_ESTADO_CITA, siguientesCita, type EstadoCita } from '../../../lib/estados';
+import { nombreEspecie } from '../../../lib/formato';
+import { enlaceWhatsApp, preferenciaCita } from '../../../lib/whatsapp';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'citas:ver');
+const citaId = Number(Astro.params.id);
+const cambio = Astro.getActionResult(actions.admin.citas.cambiarEstado);
+const notas = Astro.getActionResult(actions.admin.citas.guardarNotas);
+if (cambio?.data) return Astro.redirect(`/admin/citas/${citaId}?ok=estado`, 303);
+if (notas?.data) return Astro.redirect(`/admin/citas/${citaId}?ok=notas`, 303);
+
+const cita = actor && Number.isInteger(citaId) && citaId > 0 ? await obtenerCitaPanel(citaId) : null;
+if (actor && !cita) return Astro.redirect('/admin/citas', 303);
+
+const gestiona = can(actor, 'citas:gestionar');
+const fecha = new Intl.DateTimeFormat('es-CO', {
+  dateStyle: 'long',
+  timeStyle: 'short',
+  timeZone: 'America/Bogota',
+});
+const ACCIONES: Record<EstadoCita, { texto: string; confirmar?: string }> = {
+  solicitada: { texto: 'Volver a por agendar' },
+  confirmada: { texto: 'Marcar como agendada' },
+  atendida: { texto: 'Marcar como atendida' },
+  no_asistio: { texto: 'No asistió', confirmar: '¿Confirmas que el tutor no llegó a la cita?' },
+  cancelada: { texto: 'Cancelar cita', confirmar: '¿Cancelar esta cita? No se puede deshacer.' },
+};
+const botones = cita && gestiona ? siguientesCita(cita.estado) : [];
+// Chat con el tutor para acordar o recordar el horario. Solo los celulares tienen WhatsApp.
+const chat =
+  cita && cita.telefono.startsWith('3')
+    ? enlaceWhatsApp(`57${cita.telefono}`, `Hola, te escribimos de Vitalis por la cita ${cita.codigo}.`)
+    : null;
+const notasEnviadas = notas?.error ? await Astro.request.formData() : null;
+const errorNotas = notas?.error ? notas.error.message : undefined;
+---
+
+<AdminLayout titulo={cita ? `Cita ${cita.codigo}` : 'Cita'}>
+  {!actor || !cita ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <a href="/admin/citas" class="body-6 text-tinta-600 hover:text-azul-900">
+        ← Citas
+      </a>
+      <h1 class="heading-3 mt-2">Cita {cita.codigo}</h1>
+      <p class="body-6 mt-1 text-tinta-600">
+        Recibida el {fecha.format(cita.createdAt)} · Estado:{' '}
+        <strong class="text-azul-900">{NOMBRE_ESTADO_CITA[cita.estado]}</strong>
+      </p>
+      <div class="mt-6 flex flex-col gap-3">
+        {Astro.url.searchParams.get('ok') === 'estado' && <Aviso tipo="exito">Estado actualizado.</Aviso>}
+        {Astro.url.searchParams.get('ok') === 'notas' && <Aviso tipo="exito">Notas guardadas.</Aviso>}
+        {cambio?.error && <Aviso tipo="error">{cambio.error.message}</Aviso>}
+      </div>
+
+      <div class="mt-8 grid gap-8 lg:grid-cols-[3fr_2fr] lg:items-start">
+        <div class="flex flex-col gap-8">
+          <section aria-labelledby="titulo-consulta">
+            <h2 id="titulo-consulta" class="heading-5">
+              Consulta
+            </h2>
+            <dl class="body-3 mt-4 flex flex-col gap-3">
+              <div>
+                <dt class="body-6 text-tinta-600">Mascota</dt>
+                <dd>
+                  {cita.nombreMascota} · {nombreEspecie(cita.especie)}
+                </dd>
+              </div>
+              <div>
+                <dt class="body-6 text-tinta-600">Motivo</dt>
+                <dd class="whitespace-pre-line">{cita.motivo}</dd>
+              </div>
+              <div>
+                <dt class="body-6 text-tinta-600">Prefiere</dt>
+                <dd class="first-letter:uppercase">{preferenciaCita(cita.fechaPreferida, cita.franja)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section aria-labelledby="titulo-notas">
+            <h2 id="titulo-notas" class="heading-5">
+              Notas internas
+            </h2>
+            {gestiona ? (
+              <form method="POST" action={actions.admin.citas.guardarNotas} class="mt-4 flex flex-col gap-3">
+                <input type="hidden" name="citaId" value={cita.id} />
+                <Campo
+                  name="notas"
+                  etiqueta="Solo las ve el equipo de la clínica"
+                  multilinea
+                  maxlength={1000}
+                  ayuda="Por ejemplo: agendada para el jueves 4 de diciembre a las 3:00 p. m."
+                  value={String(notasEnviadas?.get('notas') ?? cita.notasInternas ?? '') || undefined}
+                  error={errorNotas}
+                />
+                <button type="submit" class="btn-borde self-start">
+                  Guardar notas
+                </button>
+              </form>
+            ) : (
+              <p class="body-3 mt-4 whitespace-pre-line text-tinta-600">
+                {cita.notasInternas ?? 'Sin notas.'}
+              </p>
+            )}
+          </section>
+        </div>
+
+        <aside class="flex flex-col gap-6">
+          <section class="rounded-3xl bg-arena-100 p-6" aria-labelledby="titulo-tutor">
+            <h2 id="titulo-tutor" class="heading-6">
+              Tutor
+            </h2>
+            <dl class="body-6 mt-4 flex flex-col gap-2">
+              <div>
+                <dt class="text-tinta-600">Nombre</dt>
+                <dd>{cita.nombreTutor}</dd>
+              </div>
+              <div>
+                <dt class="text-tinta-600">Celular</dt>
+                <dd>
+                  <a href={`tel:${cita.telefono}`} class="underline decoration-dorado-400 underline-offset-4">
+                    {cita.telefono}
+                  </a>
+                </dd>
+              </div>
+            </dl>
+            {chat && (
+              <a href={chat} class="btn-principal mt-6 w-full" target="_blank" rel="noopener">
+                <Icono nombre="whatsapp-logo" class="size-5" />
+                Escribir por WhatsApp
+              </a>
+            )}
+          </section>
+
+          {botones.length > 0 && (
+            <section class="flex flex-col gap-3" aria-label="Cambiar estado">
+              {botones.map((estado) => (
+                <form
+                  method="POST"
+                  action={actions.admin.citas.cambiarEstado}
+                  data-confirmar={ACCIONES[estado].confirmar}
+                >
+                  <input type="hidden" name="citaId" value={cita.id} />
+                  <input type="hidden" name="estado" value={estado} />
+                  <button
+                    type="submit"
+                    class:list={[
+                      'w-full',
+                      estado === 'cancelada' || estado === 'no_asistio'
+                        ? 'btn min-h-11 border border-error-700/40 text-error-700 hover:bg-error-700/10'
+                        : 'btn-borde',
+                    ]}
+                  >
+                    {ACCIONES[estado].texto}
+                  </button>
+                </form>
+              ))}
+            </section>
+          )}
+        </aside>
+      </div>
+    </>
+  )}
+</AdminLayout>

@@ -143,6 +143,7 @@ Qué probar:
 | `http://localhost:4321` | La portada con el recorrido por la clínica (baja con el scroll) |
 | `http://localhost:4321/tienda` | La tienda: filtros, fichas y "Agregar" |
 | `http://localhost:4321/pedido` | Tu pedido: cantidades, datos y envío |
+| `http://localhost:4321/cita` | Solicitar una cita: se guarda y te lleva a WhatsApp con el mensaje |
 | `http://localhost:4321/admin/login` | El panel: entra con tu correo y la contraseña temporal; te pedirá cambiarla |
 
 En el panel puedes crear un rol (Roles > Nuevo rol), crear un usuario con ese rol (Usuarios) y entrar con él en otra ventana de incógnito para ver qué puede hacer.

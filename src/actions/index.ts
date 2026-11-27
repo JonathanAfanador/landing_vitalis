@@ -1,25 +1,35 @@
 import { ActionError, defineAction } from 'astro:actions';
 import { auth } from './admin/auth';
 import { catalogoAdmin } from './admin/catalogo';
+import { citasAdmin } from './admin/citas';
 import { pedidosAdmin } from './admin/pedidos';
 import { rolesAdmin } from './admin/roles';
 import { usuariosAdmin } from './admin/usuarios';
 import { z } from 'astro/zod';
 import { protegerErrores } from '../lib/acciones';
+import { citasRecientes, crearCita } from '../db/queries/citas';
 import { medicamentosParaPedido } from '../db/queries/medicamentos';
 import { crearPedido, PedidoRechazado, pedidosRecientes } from '../db/queries/pedidos';
 import { cantidadDe, fijarCantidad, MAX_CANTIDAD, totalUnidades } from '../lib/carrito';
 import { guardarCarrito, leerCarrito, vaciarCarrito } from '../lib/carrito-cookies';
 import { hashIp } from '../lib/ip';
-import { datosPedidoSchema, SLUG } from '../lib/validacion';
+import { datosCitaSchema, datosPedidoSchema, SLUG } from '../lib/validacion';
 
 const MAX_PEDIDOS_POR_IP = 5;
+const MAX_CITAS_POR_IP = 3;
 const slug = z.string().max(140).regex(SLUG);
 const cantidad = (minimo: number) => z.coerce.number().int().min(minimo).max(MAX_CANTIDAD);
 
 export const server = {
   // Panel: cada Action exige sesión y permiso en el servidor (src/admin/guard.ts).
-  admin: { auth, usuarios: usuariosAdmin, roles: rolesAdmin, ...catalogoAdmin, pedidos: pedidosAdmin },
+  admin: {
+    auth,
+    usuarios: usuariosAdmin,
+    roles: rolesAdmin,
+    ...catalogoAdmin,
+    pedidos: pedidosAdmin,
+    citas: citasAdmin,
+  },
 
   // El carrito vive en una cookie HttpOnly. Son formularios: funcionan también sin JavaScript.
   carrito: {
@@ -102,6 +112,32 @@ export const server = {
                 : 'Algunos medicamentos ya no están disponibles en la cantidad que pediste. Revisa tu pedido.',
           });
         }
+      }),
+    }),
+  },
+
+  // La solicitud queda guardada para el panel y el tutor la envía por WhatsApp, donde se acuerda el horario.
+  citas: {
+    solicitar: defineAction({
+      accept: 'form',
+      input: datosCitaSchema,
+      handler: protegerErrores(async (datos, ctx) => {
+        if (datos.sitioWeb)
+          throw new ActionError({ code: 'BAD_REQUEST', message: 'No se pudo enviar la solicitud.' });
+
+        const ipHash = hashIp(ctx.clientAddress);
+        if ((await citasRecientes(ipHash)) >= MAX_CITAS_POR_IP) {
+          throw new ActionError({
+            code: 'TOO_MANY_REQUESTS',
+            message: 'Enviaste varias solicitudes seguidas. Espera unos minutos o escríbenos por WhatsApp.',
+          });
+        }
+
+        const cita = await crearCita(datos, ipHash);
+        if (!cita) {
+          throw new ActionError({ code: 'BAD_REQUEST', message: 'Elige si tu mascota es perro o gato.' });
+        }
+        return cita;
       }),
     }),
   },

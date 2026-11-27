@@ -57,10 +57,10 @@ export function calcularPedido(items: ItemCarrito[], medicamentos: MedicamentoPa
   };
 }
 
-// VIT-7K3Q9M: sin I, O, 0 ni 1 para que se pueda dictar por teléfono sin confusiones.
+// VIT-7K3Q9M (pedidos) o CIT-7K3Q9M (citas): sin I, O, 0 ni 1 para dictarlo por teléfono sin confusiones.
 const ALFABETO = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-export function generarCodigo() {
+export function generarCodigo(prefijo: 'VIT' | 'CIT' = 'VIT') {
   const bytes = crypto.getRandomValues(new Uint8Array(6));
-  return `VIT-${Array.from(bytes, (b) => ALFABETO[b % ALFABETO.length]).join('')}`;
+  return `${prefijo}-${Array.from(bytes, (b) => ALFABETO[b % ALFABETO.length]).join('')}`;
 }

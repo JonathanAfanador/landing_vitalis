@@ -29,3 +29,31 @@ export const NOMBRE_ESTADO_PEDIDO: Record<EstadoPedido, string> = {
   entregado: 'Entregado',
   cancelado: 'Cancelado',
 };
+
+export const ESTADOS_CITA = ['solicitada', 'confirmada', 'atendida', 'no_asistio', 'cancelada'] as const;
+export type EstadoCita = (typeof ESTADOS_CITA)[number];
+
+// El horario se acuerda por WhatsApp; "confirmada" significa que ya tiene fecha y hora con el tutor.
+const TRANSICIONES_CITA: Record<EstadoCita, readonly EstadoCita[]> = {
+  solicitada: ['confirmada', 'cancelada'],
+  confirmada: ['atendida', 'no_asistio', 'cancelada'],
+  atendida: [],
+  no_asistio: [],
+  cancelada: [],
+};
+
+export const siguientesCita = (estado: EstadoCita) => TRANSICIONES_CITA[estado];
+
+export const puedePasarCita = (desde: EstadoCita, hacia: EstadoCita) =>
+  TRANSICIONES_CITA[desde].includes(hacia);
+
+export const origenesCita = (hacia: EstadoCita) =>
+  ESTADOS_CITA.filter((desde) => TRANSICIONES_CITA[desde].includes(hacia));
+
+export const NOMBRE_ESTADO_CITA: Record<EstadoCita, string> = {
+  solicitada: 'Por agendar',
+  confirmada: 'Agendada',
+  atendida: 'Atendida',
+  no_asistio: 'No asistió',
+  cancelada: 'Cancelada',
+};

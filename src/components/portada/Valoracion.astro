@@ -1,13 +1,5 @@
 ---
 import Icono from '../ui/Icono.astro';
-import Pending from '../ui/Pending.astro';
-import { contacto } from '../../data/vitalis';
-import { enlaceWhatsApp } from '../../lib/whatsapp';
-
-const whatsapp = enlaceWhatsApp(
-  contacto.whatsapp,
-  'Hola, quiero agendar una valoración ortopédica para mi mascota.',
-);
 ---
 
 <section id="valoracion" class="px-4 py-16 sm:px-6 lg:py-24">
@@ -18,16 +10,11 @@ const whatsapp = enlaceWhatsApp(
     <h2 class="heading-2 mt-6">Agenda una valoración ortopédica</h2>
     <p class="body-3 mx-auto mt-4 max-w-xl text-tinta-600">
       Si tu mascota cojea, le duele al moverse o se está recuperando de una lesión, el doctor la revisa y te
-      explica las opciones.
+      explica las opciones. Déjanos sus datos y te confirmamos el horario por WhatsApp.
     </p>
-    {whatsapp ? (
-      <a href={whatsapp} class="btn-principal mt-8" target="_blank" rel="noopener">
-        <Icono nombre="whatsapp-logo" class="size-5" />
-        Agendar por WhatsApp
-      </a>
-    ) : (
-      <Pending dato="número de WhatsApp" class="mt-8" />
-    )}
-    <Pending dato="formulario de cita (Fase 4)" class="mt-4" />
+    <a href="/cita" class="btn-principal mt-8">
+      Solicitar cita
+      <Icono nombre="arrow-right" class="size-5" />
+    </a>
   </div>
 </section>

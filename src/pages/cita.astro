@@ -1,0 +1,274 @@
+---
+import { actions, isInputError } from 'astro:actions';
+import Pagina from '../layouts/Pagina.astro';
+import Aviso from '../components/ui/Aviso.astro';
+import Campo from '../components/formularios/Campo.astro';
+import Icono from '../components/ui/Icono.astro';
+import Pending from '../components/ui/Pending.astro';
+import { contacto } from '../data/vitalis';
+import { listarEspecies } from '../db/queries/medicamentos';
+import { nombreEspecie } from '../lib/formato';
+import { registrarError } from '../lib/registro';
+import { rangoFechaCita } from '../lib/validacion';
+import { enlaceWhatsApp, mensajeCita } from '../lib/whatsapp';
+
+export const prerender = false;
+// Página de cada persona: nunca entra en ninguna caché.
+Astro.response.headers.set('Cache-Control', 'private, no-store');
+
+const envio = Astro.getActionResult(actions.citas.solicitar);
+const cita = envio?.data ?? null;
+const errores = envio?.error && isInputError(envio.error) ? envio.error.fields : {};
+const errorGeneral = envio?.error && !isInputError(envio.error) ? envio.error.message : null;
+// Si el envío falló, se vuelven a rellenar los campos con lo que se escribió.
+const enviado = envio?.error ? await Astro.request.formData() : null;
+const valor = (campo: string) => String(enviado?.get(campo) ?? '') || undefined;
+const primerError = (campo: keyof typeof errores) => errores[campo]?.[0];
+
+let especies: { slug: string }[] = [];
+let fallo = false;
+if (!cita) {
+  try {
+    especies = await listarEspecies();
+  } catch (error) {
+    registrarError('cita', error);
+    fallo = true;
+  }
+}
+
+const whatsapp = cita ? enlaceWhatsApp(contacto.whatsapp, mensajeCita(cita)) : null;
+const rango = rangoFechaCita();
+const franja = valor('franja') ?? '';
+const FRANJAS = [
+  { valor: 'manana', texto: 'Mañana' },
+  { valor: 'tarde', texto: 'Tarde' },
+  { valor: '', texto: 'Me da igual' },
+];
+const PASOS = [
+  'Llenas este formulario con los datos de tu mascota.',
+  'Nos envías la solicitud por WhatsApp con un solo toque.',
+  'Te respondemos por WhatsApp con el día y la hora de la cita.',
+];
+const opcion =
+  'flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-azul-900/20 bg-crema-50 px-4 has-checked:border-azul-900 has-checked:bg-azul-900 has-checked:text-crema-50 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-azul-900';
+---
+
+<Pagina
+  titulo="Agenda una valoración · Vitalis"
+  descripcion="Solicita una valoración ortopédica para tu perro o gato en Vitalis, Girardot. Te confirmamos el horario por WhatsApp."
+>
+  <div class="mx-auto max-w-6xl">
+    <p class="caption-3 text-dorado-700">Citas</p>
+    <h1 class="heading-2 mt-3">{cita ? 'Recibimos tu solicitud' : 'Agenda una valoración'}</h1>
+
+    {errorGeneral && (
+      <Aviso tipo="error" class="mt-6">
+        {errorGeneral}
+      </Aviso>
+    )}
+
+    {cita ? (
+      <section class="mt-8 rounded-3xl border border-azul-900/10 p-6 text-center sm:p-12">
+        <span class="mx-auto grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
+          <Icono nombre="check-circle" />
+        </span>
+        <p class="body-3 mt-6 text-tinta-600">
+          Tu código es <strong class="font-semibold text-azul-900">{cita.codigo}</strong>.
+        </p>
+        <p class="body-3 mx-auto mt-2 max-w-xl text-tinta-600">
+          Envíanos la solicitud por WhatsApp para acordar el día y la hora de la cita de {cita.mascota}.
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          {whatsapp && (
+            <a href={whatsapp} class="btn-principal" target="_blank" rel="noopener">
+              <Icono nombre="whatsapp-logo" class="size-5" />
+              Enviar por WhatsApp
+            </a>
+          )}
+          <a href="/" class="btn-borde">
+            Volver al inicio
+          </a>
+        </div>
+        {!whatsapp && <Pending dato="número de WhatsApp para enviar la solicitud" class="mt-4" />}
+      </section>
+    ) : fallo ? (
+      <div
+        class="mt-8 flex flex-col items-center rounded-3xl border border-azul-900/10 px-6 py-16 text-center"
+        role="alert"
+      >
+        <h2 class="heading-5">No pudimos cargar el formulario</h2>
+        <p class="body-3 mt-2 text-tinta-600">Vuelve a intentarlo en unos segundos.</p>
+        <a href="/cita" class="btn-principal mt-6">
+          Reintentar
+        </a>
+      </div>
+    ) : (
+      <div class="mt-8 grid gap-10 lg:grid-cols-[2fr_3fr] lg:items-start">
+        <section aria-labelledby="titulo-pasos">
+          <p class="body-3 text-tinta-600">
+            Si tu mascota cojea, le duele al moverse o se está recuperando de una lesión, el doctor la revisa
+            y te explica las opciones.
+          </p>
+          <h2 id="titulo-pasos" class="heading-5 mt-8">
+            Cómo funciona
+          </h2>
+          <ol class="mt-4 flex flex-col gap-4">
+            {PASOS.map((paso, i) => (
+              <li class="flex gap-4">
+                <span class="grid size-9 shrink-0 place-items-center rounded-full bg-dorado-400/25 font-semibold text-dorado-700 tabular-nums">
+                  {i + 1}
+                </span>
+                <p class="body-3 pt-1">{paso}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="titulo-form" class="rounded-3xl bg-arena-100 p-6">
+          <h2 id="titulo-form" class="heading-5">
+            Datos de la cita
+          </h2>
+          <form method="POST" action={actions.citas.solicitar} class="mt-6 flex flex-col gap-5">
+            <Campo
+              name="nombre"
+              etiqueta="Tu nombre"
+              autocomplete="name"
+              required
+              minlength={2}
+              maxlength={80}
+              value={valor('nombre')}
+              error={primerError('nombre')}
+            />
+            <Campo
+              name="telefono"
+              etiqueta="Celular o WhatsApp"
+              type="tel"
+              inputmode="tel"
+              autocomplete="tel-national"
+              required
+              maxlength={20}
+              ayuda="10 dígitos, por ejemplo 300 123 4567."
+              value={valor('telefono')}
+              error={primerError('telefono')}
+            />
+
+            <fieldset aria-describedby="error-especie">
+              <legend class="mb-2 text-sm font-medium">¿Es perro o gato?</legend>
+              <div class="flex flex-wrap gap-2">
+                {especies.map((e) => (
+                  <label class={opcion}>
+                    <input
+                      type="radio"
+                      name="especie"
+                      value={e.slug}
+                      required
+                      checked={valor('especie') === e.slug}
+                      class="sr-only"
+                    />
+                    <Icono nombre={e.slug === 'gato' ? 'cat' : 'dog'} class="size-5" />
+                    {nombreEspecie(e.slug)}
+                  </label>
+                ))}
+              </div>
+              <p id="error-especie" class="body-6 mt-1 text-error-700">
+                {primerError('especie')}
+              </p>
+            </fieldset>
+
+            <Campo
+              name="mascota"
+              etiqueta="Nombre de tu mascota"
+              required
+              maxlength={60}
+              value={valor('mascota')}
+              error={primerError('mascota')}
+            />
+            <Campo
+              name="motivo"
+              etiqueta="¿Qué le pasa?"
+              multilinea
+              required
+              minlength={5}
+              maxlength={500}
+              ayuda="Por ejemplo: cojea de la pata trasera desde hace una semana."
+              value={valor('motivo')}
+              error={primerError('motivo')}
+            />
+
+            <Campo
+              name="fecha"
+              etiqueta="Día que prefieres"
+              type="date"
+              min={rango.min}
+              max={rango.max}
+              ayuda="Te confirmamos el horario por WhatsApp según la agenda del doctor."
+              value={valor('fecha')}
+              error={primerError('fecha')}
+            />
+
+            <fieldset aria-describedby="error-franja">
+              <legend class="mb-2 text-sm font-medium">
+                Horario que prefieres <span class="font-normal text-tinta-600">(opcional)</span>
+              </legend>
+              <div class="flex flex-wrap gap-2">
+                {FRANJAS.map((f) => (
+                  <label class={opcion}>
+                    <input
+                      type="radio"
+                      name="franja"
+                      value={f.valor}
+                      checked={franja === f.valor}
+                      class="sr-only"
+                    />
+                    {f.texto}
+                  </label>
+                ))}
+              </div>
+              <p id="error-franja" class="body-6 mt-1 text-error-700">
+                {primerError('franja')}
+              </p>
+            </fieldset>
+
+            <div>
+              <label class="body-6 flex gap-3">
+                <input
+                  type="checkbox"
+                  name="aceptaDatos"
+                  required
+                  checked={enviado?.has('aceptaDatos')}
+                  aria-invalid={primerError('aceptaDatos') ? 'true' : undefined}
+                  aria-describedby="error-acepta-datos"
+                  class="mt-0.5 size-5 shrink-0 accent-azul-900"
+                />
+                <span>
+                  Autorizo el tratamiento de mis datos según la{' '}
+                  <a
+                    href="/politica-de-datos"
+                    target="_blank"
+                    class="underline decoration-dorado-400 underline-offset-4"
+                  >
+                    política de tratamiento de datos
+                  </a>
+                  .
+                </span>
+              </label>
+              <p id="error-acepta-datos" class="body-6 mt-1 text-error-700">
+                {primerError('aceptaDatos')}
+              </p>
+            </div>
+
+            <div class="absolute -left-full" aria-hidden="true">
+              <label>
+                No llenes este campo <input type="text" name="sitioWeb" tabindex="-1" autocomplete="off" />
+              </label>
+            </div>
+
+            <button type="submit" class="btn-principal w-full">
+              Solicitar cita
+            </button>
+          </form>
+        </section>
+      </div>
+    )}
+  </div>
+</Pagina>

@@ -18,6 +18,7 @@ const ruta = Astro.url.pathname;
 const menu: { texto: string; href: string; capacidad?: Capacidad }[] = [
   { texto: 'Resumen', href: '/admin' },
   { texto: 'Pedidos', href: '/admin/pedidos', capacidad: 'pedidos:ver' },
+  { texto: 'Citas', href: '/admin/citas', capacidad: 'citas:ver' },
   { texto: 'Medicamentos', href: '/admin/medicamentos', capacidad: 'medicamentos:ver' },
   { texto: 'Categorías', href: '/admin/categorias', capacidad: 'categorias:gestionar' },
   { texto: 'Usuarios', href: '/admin/usuarios', capacidad: 'usuarios:ver' },

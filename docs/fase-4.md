@@ -12,6 +12,7 @@ Entregas: **4A** autenticación + RBAC + auditoría · **4B** medicamentos, cate
 | Exportar CSV | **Pospuesto.** Queda en `docs/pendientes.md` y se recuerda al cerrar cada entrega |
 | Envíos | **No hay domicilios: solo venta y recogida en la clínica.** Se quita `enviado` y se dejan de pedir dirección y municipio. Ver la sección 13 |
 | Aviso por WhatsApp al confirmar | **No se hace ahora.** Queda en pendientes |
+| Citas | **Se agendan por WhatsApp.** La administradora acomoda los horarios: el formulario guarda la solicitud y lleva al tutor a WhatsApp con el mensaje escrito. Ver la sección 17 |
 | Pago | **Transferencia antes de recoger** (Nequi, Daviplata, cuenta o llave Bre-B). La clínica envía los datos de pago por WhatsApp al confirmar y marca el pedido como pagado en el panel. Nada de "pagas al recoger" |
 
 ---
@@ -302,6 +303,8 @@ Las dos máquinas viven en `src/lib/estados.ts` como funciones puras con pruebas
 
 ## 7. Citas
 
+> Cambió en la entrega 4C por decisión del usuario: ver la sección 17. Lo que sigue es el plan original.
+
 - **Formulario público** en la sección "Agenda una valoración" de la portada. Campos:
   - Nombre del tutor, teléfono, correo (opcional), especie, nombre de la mascota y motivo.
   - Fecha preferida: desde mañana y hasta 60 días.
@@ -419,3 +422,18 @@ Se reemplaza el carrito en `localStorage` por una cookie `HttpOnly`:
 - **Panel:** medicamentos (listado con filtros y cursor, crear, editar, activar o desactivar, ajustar stock con motivo, eliminar solo si nunca estuvo en pedidos), categorías (crear, renombrar, borrar vacías) y pedidos (listado por estado, detalle y botones según la máquina de estados y los permisos). El resumen muestra los pedidos pendientes.
 - **Solo venta en tienda:** el pedido pide nombre, celular, correo opcional y notas; textos, preguntas frecuentes, términos y política de datos actualizados.
 - **Pruebas contra el servidor:** 53 de 53 (401/403 por Action, roles con permisos parciales, `[DEMO]` rechazado, transiciones inválidas, cancelación doble y triple simultánea con el stock devuelto una vez, borrados protegidos y permisos de la base).
+
+## 17. Entrega 4C: citas por WhatsApp (decisión del usuario)
+
+La administradora acomoda los horarios, así que la web no maneja agenda: **el formulario guarda la solicitud y lleva al tutor a WhatsApp con el mensaje escrito**. El día y la hora se acuerdan en el chat.
+
+- **Formulario en `/cita`** (renderizado en el servidor, como `/pedido`). La sección "Agenda una valoración" de la portada y el botón secundario del hero llevan ahí. Campos: nombre, celular, perro o gato, nombre de la mascota, motivo y, **opcionales**, día preferido (desde mañana y hasta 60 días, en hora de Colombia) y franja (mañana, tarde o me da igual). Autorización de la Ley 1581, campo trampa y **3 solicitudes por IP cada 10 minutos**.
+- **Respecto al plan original:** no se pide correo (con el celular basta y es un dato personal menos), y fecha y franja pasan a ser opcionales porque el horario lo decide la clínica.
+- **Respuesta:** código `CIT-XXXXXX` y botón "Enviar por WhatsApp" con código, mascota, especie, motivo y preferencia. Es un botón y no una redirección automática: los navegadores de Instagram y Facebook bloquean abrir apps sin un toque, y así el tutor ve su código. Si no envía el mensaje, la solicitud igual queda en el panel.
+- **Estados:** solicitada ("Por agendar") → confirmada ("Agendada") → atendida o no asistió; se cancela desde solicitada o confirmada. Mismo patrón que los pedidos: `WHERE estado IN (origenes)` y pruebas en `tests/unit/citas.test.ts`.
+- **Panel `/admin/citas`:** listado por estado con cursor (tutor, mascota y preferencia; el celular y el motivo solo en el detalle), detalle con botón "Escribir por WhatsApp" al celular del tutor (para cuando no llegó su mensaje), cambio de estado y **notas internas** para anotar el día y la hora acordados. El resumen muestra cuántas citas faltan por agendar.
+- **Permisos nuevos (2):** `citas:ver` (datos personales) y `citas:gestionar`. El rol `admin` los recibe por defecto.
+- **Auditoría:** cada cambio de estado (`cita_estado_cambiado`). Las notas no se auditan porque pueden tener datos de salud.
+- **Migraciones:** `0006` (tabla `solicitudes_cita` y enums `estado_cita` y `franja_cita`) y `0007` (GRANT). `vitalis_app` inserta y solo lee `id, codigo, ip_hash, created_at`, nunca los datos del tutor. `vitalis_admin` lee y solo cambia `estado` y `notas_internas`.
+- **Refactor:** el cursor `(created_at, id)` de los listados del panel pasa a `src/admin/cursor.ts` (lo usan pedidos, citas y auditoría).
+- **Probado contra PostgreSQL 16 local:** migraciones desde cero, GRANT por columna, formulario con errores y relleno, camino feliz con el mensaje de WhatsApp, límite de envíos y, en el panel, notas, agendar y atender con su registro en la auditoría.

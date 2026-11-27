@@ -8,3 +8,18 @@ export const normalizarTelefono = (telefono: string) => {
   const digitos = telefono.replace(/\D/g, '');
   return digitos.length === 12 && digitos.startsWith('57') ? digitos.slice(2) : digitos;
 };
+
+// "miércoles, 2 de diciembre" a partir de una fecha sin hora (YYYY-MM-DD), sin que la zona horaria la mueva.
+const diaMes = new Intl.DateTimeFormat('es-CO', {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  timeZone: 'UTC',
+});
+export const formatoFecha = (fecha: string) => diaMes.format(new Date(`${fecha}T00:00:00Z`));
+
+// La tabla de especies guarda el nombre en plural ("Perros"); en una cita se habla de una sola mascota.
+export const nombreEspecie = (slug: string) => {
+  const texto = slug.replaceAll('-', ' ');
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+};

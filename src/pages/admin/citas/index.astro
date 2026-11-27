@@ -1,0 +1,121 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import SinPermiso from '../../../components/admin/SinPermiso.astro';
+import { listarCitasPanel } from '../../../admin/citas';
+import { permisoDePagina } from '../../../admin/guard';
+import { ESTADOS_CITA, NOMBRE_ESTADO_CITA } from '../../../lib/estados';
+import { preferenciaCita } from '../../../lib/whatsapp';
+
+export const prerender = false;
+
+const actor = permisoDePagina(Astro, 'citas:ver');
+const estadoParam = Astro.url.searchParams.get('estado');
+const estado = ESTADOS_CITA.find((e) => e === estadoParam) ?? null;
+const { citas, siguienteCursor } = actor
+  ? await listarCitasPanel({ estado, cursor: Astro.url.searchParams.get('cursor') })
+  : { citas: [], siguienteCursor: null };
+const siguiente = new URL(Astro.url);
+if (siguienteCursor) siguiente.searchParams.set('cursor', siguienteCursor);
+const fecha = new Intl.DateTimeFormat('es-CO', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+  timeZone: 'America/Bogota',
+});
+const color: Record<string, string> = {
+  solicitada: 'bg-dorado-400/30 text-azul-900',
+  confirmada: 'bg-azul-led/10 text-azul-led',
+  atendida: 'bg-arena-100 text-tinta-600',
+  no_asistio: 'bg-error-700/10 text-error-700',
+  cancelada: 'bg-error-700/10 text-error-700',
+};
+---
+
+<AdminLayout titulo="Citas">
+  {!actor ? (
+    <SinPermiso />
+  ) : (
+    <>
+      <h1 class="heading-3">Citas</h1>
+      <p class="body-6 mt-2 max-w-2xl text-tinta-600">
+        Solicitudes del formulario de la web. El horario se acuerda con el tutor por WhatsApp; cuando quede
+        definido, marca la cita como agendada y anota el día y la hora.
+      </p>
+      <nav aria-label="Filtrar por estado" class="mt-6 flex flex-wrap gap-2">
+        {[null, ...ESTADOS_CITA].map((e) => (
+          <a
+            href={e ? `/admin/citas?estado=${e}` : '/admin/citas'}
+            aria-current={e === estado ? 'page' : undefined}
+            class="btn-borde min-h-10 px-4 text-sm aria-[current=page]:bg-azul-900 aria-[current=page]:text-crema-50"
+          >
+            {e ? NOMBRE_ESTADO_CITA[e] : 'Todas'}
+          </a>
+        ))}
+      </nav>
+
+      {citas.length ? (
+        <div class="mt-8 rounded-3xl border border-azul-900/10 md:overflow-x-auto">
+          <table class="block w-full text-left md:table md:min-w-3xl">
+            <thead class="caption-3 hidden bg-arena-100 text-dorado-700 md:table-header-group">
+              <tr>
+                <th scope="col" class="px-4 py-3">
+                  Código
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Recibida
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Tutor
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Mascota
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Prefiere
+                </th>
+                <th scope="col" class="px-4 py-3">
+                  Estado
+                </th>
+              </tr>
+            </thead>
+            <tbody class="body-6 block divide-y divide-azul-900/10 md:table-row-group">
+              {citas.map((c) => (
+                <tr class="block py-2 md:table-row md:py-0">
+                  <td class="block px-4 py-1 md:table-cell md:py-3">
+                    <a
+                      href={`/admin/citas/${c.id}`}
+                      class="title-3 underline decoration-dorado-400 underline-offset-4"
+                    >
+                      {c.codigo}
+                    </a>
+                  </td>
+                  <td class="block px-4 py-1 text-tinta-600 md:table-cell md:py-3">
+                    {fecha.format(c.fecha)}
+                  </td>
+                  <td class="block px-4 py-1 md:table-cell md:py-3">{c.tutor}</td>
+                  <td class="block px-4 py-1 md:table-cell md:py-3">{c.mascota}</td>
+                  <td class="block px-4 py-1 text-tinta-600 first-letter:uppercase md:table-cell md:py-3">
+                    {preferenciaCita(c.fechaPreferida, c.franja)}
+                  </td>
+                  <td class="block px-4 py-2 md:table-cell md:py-3">
+                    <span class:list={['caption-3 rounded-full px-2 py-1', color[c.estado]]}>
+                      {NOMBRE_ESTADO_CITA[c.estado]}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p class="body-3 mt-8 rounded-3xl bg-arena-100 p-6">
+          No hay citas {estado ? 'en este estado' : 'todavía'}.
+        </p>
+      )}
+      {siguienteCursor && (
+        <a href={siguiente.pathname + siguiente.search} class="btn-borde mt-6">
+          Citas anteriores
+        </a>
+      )}
+    </>
+  )}
+</AdminLayout>

@@ -32,7 +32,7 @@ export const doctor = {
 
 export const cta = {
   principal: { texto: 'Pedir medicamentos', href: '/tienda' },
-  secundario: { texto: 'Agendar valoración', href: '#valoracion' },
+  secundario: { texto: 'Agendar valoración', href: '/cita' },
 };
 
 export const navegacion = [

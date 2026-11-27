@@ -2,17 +2,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { dbAdmin } from '../db/client-admin';
 import { medicamentos, pedidoItems, pedidos } from '../db/schema';
 import { origenesPedido, type EstadoPedido } from '../lib/estados';
-
-type Cursor = { fecha: string; id: number };
-const leerCursor = (valor: string | null): Cursor | null => {
-  if (!valor) return null;
-  try {
-    const [fecha, id] = JSON.parse(Buffer.from(valor, 'base64url').toString()) as unknown[];
-    return typeof fecha === 'string' && Number.isInteger(id) ? { fecha, id: id as number } : null;
-  } catch {
-    return null;
-  }
-};
+import { leerCursorFecha, paginar } from './cursor';
 
 // Más recientes primero, paginado por cursor (created_at, id). El listado solo muestra el nombre del
 // cliente; teléfono y correo quedan para el detalle.
@@ -20,7 +10,7 @@ export async function listarPedidosPanel(
   filtros: { estado: EstadoPedido | null; cursor: string | null },
   limite = 30,
 ) {
-  const cursor = leerCursor(filtros.cursor);
+  const cursor = leerCursorFecha(filtros.cursor);
   const filas = await dbAdmin
     .select({
       id: pedidos.id,
@@ -42,16 +32,8 @@ export async function listarPedidosPanel(
     )
     .orderBy(desc(pedidos.createdAt), desc(pedidos.id))
     .limit(limite + 1);
-  const hayMas = filas.length > limite;
-  const pagina = hayMas ? filas.slice(0, limite) : filas;
-  const ultimo = pagina.at(-1);
-  return {
-    pedidos: pagina,
-    siguienteCursor:
-      hayMas && ultimo
-        ? Buffer.from(JSON.stringify([ultimo.fechaExacta, ultimo.id])).toString('base64url')
-        : null,
-  };
+  const { pagina, siguienteCursor } = paginar(filas, limite);
+  return { pedidos: pagina, siguienteCursor };
 }
 
 export async function obtenerPedidoPanel(id: number) {
