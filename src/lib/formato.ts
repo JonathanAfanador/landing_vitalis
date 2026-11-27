@@ -9,6 +9,9 @@ export const normalizarTelefono = (telefono: string) => {
   return digitos.length === 12 && digitos.startsWith('57') ? digitos.slice(2) : digitos;
 };
 
+// 310 555 1234 (celular) o 601 234 5678 (fijo), a partir de los 10 dígitos ya normalizados.
+export const formatoTelefono = (telefono: string) => telefono.replace(/^(\d{3})(\d{3})(\d{4})$/, '$1 $2 $3');
+
 // "miércoles, 2 de diciembre" a partir de una fecha sin hora (YYYY-MM-DD), sin que la zona horaria la mueva.
 const diaMes = new Intl.DateTimeFormat('es-CO', {
   weekday: 'long',

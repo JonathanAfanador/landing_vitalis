@@ -1,4 +1,4 @@
-import { formatoCOP, formatoFecha } from './formato';
+import { formatoCOP, formatoFecha, formatoTelefono } from './formato';
 
 // Sirve en el servidor y en el navegador: no importa el archivo de contenido, el número llega como parámetro.
 export const enlaceWhatsApp = (numero: string | null, mensaje: string) =>
@@ -20,6 +20,8 @@ export const mensajePedido = ({ codigo, totalCop, lineas }: Resumen) =>
 
 type ResumenCita = {
   codigo: string;
+  nombre: string;
+  telefono: string;
   mascota: string;
   especie: string;
   motivo: string;
@@ -29,15 +31,22 @@ type ResumenCita = {
 
 const NOMBRE_FRANJA = { manana: 'en la mañana', tarde: 'en la tarde' } as const;
 
+// Para el panel: "miércoles, 2 de diciembre, en la tarde" o "Sin preferencia".
 export const preferenciaCita = (fecha: string | null, franja: ResumenCita['franja']) =>
   [fecha && formatoFecha(fecha), franja && NOMBRE_FRANJA[franja]].filter(Boolean).join(', ') ||
   'Sin preferencia';
 
-export const mensajeCita = ({ codigo, mascota, especie, motivo, fecha, franja }: ResumenCita) =>
-  [
-    `Hola, acabo de solicitar la cita ${codigo} en la web de Vitalis.`,
-    `Mascota: ${mascota} (${especie})`,
-    `Motivo: ${motivo}`,
-    `Preferencia: ${preferenciaCita(fecha, franja)}`,
-    'Quedo pendiente para acordar el horario.',
+// Lo escribe el tutor, en primera persona: la web no reserva nada, solo le deja el mensaje listo para pedir
+// la cita. El código va al final para que la clínica encuentre la solicitud en el panel.
+export const mensajeCita = (c: ResumenCita) => {
+  const cuando = [c.fecha && `el ${formatoFecha(c.fecha)}`, c.franja && NOMBRE_FRANJA[c.franja]]
+    .filter(Boolean)
+    .join(', ');
+  return [
+    `Hola, soy ${c.nombre}, mi número es ${formatoTelefono(c.telefono)}.`,
+    `Tengo un ${c.especie} que se llama ${c.mascota}. Lo que le pasa: ${c.motivo}`,
+    ...(cuando ? [`Si es posible, me queda mejor ${cuando}.`] : []),
+    'Deseo agendar una cita de valoración.',
+    `(Código de la web: ${c.codigo})`,
   ].join('\n');
+};

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { paginar } from '../../src/admin/cursor';
 import { origenesCita, puedePasarCita, siguientesCita } from '../../src/lib/estados';
-import { formatoFecha, nombreEspecie } from '../../src/lib/formato';
+import { formatoFecha, formatoTelefono, nombreEspecie } from '../../src/lib/formato';
 import { generarCodigo } from '../../src/lib/pedido';
 import { datosCitaSchema, rangoFechaCita } from '../../src/lib/validacion';
 import { mensajeCita, preferenciaCita } from '../../src/lib/whatsapp';
@@ -88,6 +88,8 @@ describe('datosCitaSchema', () => {
 describe('mensaje de WhatsApp de la cita', () => {
   const cita = {
     codigo: 'CIT-7K3Q9M',
+    nombre: 'Laura Gómez',
+    telefono: '3105551234',
     mascota: 'Luna',
     especie: 'perro',
     motivo: 'Cojea de la pata trasera.',
@@ -95,19 +97,27 @@ describe('mensaje de WhatsApp de la cita', () => {
     franja: 'manana' as const,
   };
 
-  it('lleva el código, la mascota, el motivo y la preferencia', () => {
+  it('es el tutor presentándose y pidiendo la cita, con el código al final', () => {
     expect(mensajeCita(cita)).toBe(
       [
-        'Hola, acabo de solicitar la cita CIT-7K3Q9M en la web de Vitalis.',
-        'Mascota: Luna (perro)',
-        'Motivo: Cojea de la pata trasera.',
-        'Preferencia: miércoles, 2 de diciembre, en la mañana',
-        'Quedo pendiente para acordar el horario.',
+        'Hola, soy Laura Gómez, mi número es 310 555 1234.',
+        'Tengo un perro que se llama Luna. Lo que le pasa: Cojea de la pata trasera.',
+        'Si es posible, me queda mejor el miércoles, 2 de diciembre, en la mañana.',
+        'Deseo agendar una cita de valoración.',
+        '(Código de la web: CIT-7K3Q9M)',
       ].join('\n'),
     );
   });
 
-  it('dice "Sin preferencia" cuando no hay fecha ni franja', () => {
+  it('sin fecha ni franja no menciona preferencia', () => {
+    const mensaje = mensajeCita({ ...cita, fecha: null, franja: null });
+    expect(mensaje).not.toContain('Si es posible');
+    expect(mensajeCita({ ...cita, fecha: null, franja: 'tarde' })).toContain(
+      'Si es posible, me queda mejor en la tarde.',
+    );
+  });
+
+  it('en el panel la preferencia vacía se lee "Sin preferencia"', () => {
     expect(preferenciaCita(null, null)).toBe('Sin preferencia');
     expect(preferenciaCita(null, 'tarde')).toBe('en la tarde');
   });
@@ -116,6 +126,11 @@ describe('mensaje de WhatsApp de la cita', () => {
 describe('utilidades de la cita', () => {
   it('formatea la fecha sin que la zona horaria la corra un día', () => {
     expect(formatoFecha('2026-12-01')).toBe('martes, 1 de diciembre');
+  });
+
+  it('agrupa el teléfono para leerlo fácil', () => {
+    expect(formatoTelefono('3105551234')).toBe('310 555 1234');
+    expect(formatoTelefono('6012345678')).toBe('601 234 5678');
   });
 
   it('nombra la especie en singular a partir del slug', () => {

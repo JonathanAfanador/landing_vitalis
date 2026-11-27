@@ -52,6 +52,8 @@ export async function crearCita(datos: DatosCita, ipHash: string) {
       if (!cita) throw new Error('No se pudo guardar la solicitud de cita');
       return {
         codigo: cita.codigo,
+        nombre: datos.nombre,
+        telefono: datos.telefono,
         mascota: datos.mascota,
         especie: nombreEspecie(datos.especie).toLowerCase(),
         motivo: datos.motivo,

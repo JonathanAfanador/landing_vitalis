@@ -46,7 +46,7 @@ const FRANJAS = [
 ];
 const PASOS = [
   'Llenas este formulario con los datos de tu mascota.',
-  'Nos envías la solicitud por WhatsApp con un solo toque.',
+  'Nos envías el mensaje por WhatsApp con un solo toque: ya va escrito.',
   'Te respondemos por WhatsApp con el día y la hora de la cita.',
 ];
 const opcion =
@@ -59,7 +59,7 @@ const opcion =
 >
   <div class="mx-auto max-w-6xl">
     <p class="caption-3 text-dorado-700">Citas</p>
-    <h1 class="heading-2 mt-3">{cita ? 'Recibimos tu solicitud' : 'Agenda una valoración'}</h1>
+    <h1 class="heading-2 mt-3">{cita ? 'Último paso: escríbenos por WhatsApp' : 'Agenda una valoración'}</h1>
 
     {errorGeneral && (
       <Aviso tipo="error" class="mt-6">
@@ -70,14 +70,13 @@ const opcion =
     {cita ? (
       <section class="mt-8 rounded-3xl border border-azul-900/10 p-6 text-center sm:p-12">
         <span class="mx-auto grid size-12 place-items-center rounded-full bg-dorado-400/25 text-dorado-700">
-          <Icono nombre="check-circle" />
+          <Icono nombre="whatsapp-logo" />
         </span>
-        <p class="body-3 mt-6 text-tinta-600">
-          Tu código es <strong class="font-semibold text-azul-900">{cita.codigo}</strong>.
+        <p class="body-3 mx-auto mt-6 max-w-xl text-tinta-600">
+          Toca el botón para enviarnos tu mensaje ya escrito. Revisamos la agenda del doctor y te respondemos
+          por WhatsApp con el día y la hora disponibles para {cita.mascota}.
         </p>
-        <p class="body-3 mx-auto mt-2 max-w-xl text-tinta-600">
-          Envíanos la solicitud por WhatsApp para acordar el día y la hora de la cita de {cita.mascota}.
-        </p>
+        <p class="caption-5 mt-4 text-tinta-600">Código de tu solicitud: {cita.codigo}</p>
         <div class="mt-8 flex flex-wrap justify-center gap-3">
           {whatsapp && (
             <a href={whatsapp} class="btn-principal" target="_blank" rel="noopener">
